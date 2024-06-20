@@ -1,0 +1,26 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+// with cs.SetTexture
+RWTexture2D<float4> Result;
+
+// Same Struct as in C# but in HLSL
+struct Person
+{
+    float2 position;
+    float speed_percentage;
+    int health_status;
+};
+
+RWStructuredBuffer<Person> buffer;
+
+
+
+[numthreads(64,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+
+    Result[buffer[id.x].position] = float4(1, 1, 1, 0);
+    //Result[id.xy] = float4(id.x & id.y, (id.x & 15)/15.0, (id.y & 15)/15.0, 0.0);
+}
+
