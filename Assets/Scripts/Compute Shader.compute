@@ -8,19 +8,46 @@ RWTexture2D<float4> Result;
 struct Person
 {
     float2 position;
+    float2 target_position;
     float speed_percentage;
     int health_status;
 };
 
 RWStructuredBuffer<Person> buffer;
+RWStructuredBuffer<float2> debug_buffer;
+
+// Variables
+float global_speed;
 
 
+// Functions
+float2 Move_Person(float2 current_position, float2 target_position, float global_speed, float speed_percentage,uint3 id);
 
-[numthreads(64,1,1)]
+[numthreads(512,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-
+    
+    float2 position_change;
+    position_change =  Move_Person(buffer[id.x].position, buffer[id.x].target_position, global_speed, buffer[id.x].speed_percentage,id);
+    //debug_buffer[id.x] = position_change;
+    buffer[id.x].position += position_change;
     Result[buffer[id.x].position] = float4(1, 1, 1, 0);
-    //Result[id.xy] = float4(id.x & id.y, (id.x & 15)/15.0, (id.y & 15)/15.0, 0.0);
 }
 
+
+
+float2 Move_Person(float2 current_position, float2 target_position, float global_speed, float speed_percentage,uint3 id)
+{
+    float new_position_x;
+    float new_position_y;
+    
+    float angle_of_movement;
+    
+    
+    angle_of_movement = atan((target_position.x - current_position.x) / (target_position.y - current_position.y));
+    //debug_buffer[id.x].x = angle_of_movement;
+    
+    new_position_x = sin(angle_of_movement);
+    new_position_y = cos(angle_of_movement);
+    return float2(new_position_x, new_position_y);
+}       
