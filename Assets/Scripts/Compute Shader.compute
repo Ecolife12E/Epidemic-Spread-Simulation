@@ -1,5 +1,6 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel CSMain
+#pragma kernel CSMain
 
 // with cs.SetTexture
 RWTexture2D<float4> Result;
@@ -18,35 +19,82 @@ RWStructuredBuffer<float2> debug_buffer;
 
 // Variables
 float global_speed;
+float min_distance;
+float PI;
 
 
 // Functions
-float2 Move_Person(float2 current_position, float2 target_position, float global_speed, float speed_percentage,uint3 id);
+float2 Move_Person(float2 current_position, float2 target_position, float global_speed, float speed_percentage,uint3 id, float min_distance);
 
 [numthreads(512,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
     
+    
+    
     float2 position_change;
-    position_change =  Move_Person(buffer[id.x].position, buffer[id.x].target_position, global_speed, buffer[id.x].speed_percentage,id);
+    position_change =  Move_Person(buffer[id.x].position, buffer[id.x].target_position, global_speed, buffer[id.x].speed_percentage,id,min_distance);
     //debug_buffer[id.x] = position_change;
     buffer[id.x].position += position_change;
-    Result[buffer[id.x].position] = float4(1, 1, 1, 0);
+    
+    if (id.x == 0)
+    {
+        Result[buffer[id.x].position] = float4(1, 0, 0, 0);
+        Result[buffer[id.x].target_position] = float4(0, 1, 0, 0);
+    }
+    else
+    {
+        Result[buffer[id.x].position] = float4(1, 1, 1, 0);
+    }
 }
 
 
 
-float2 Move_Person(float2 current_position, float2 target_position, float global_speed, float speed_percentage,uint3 id)
+float2 Move_Person(float2 current_position, float2 target_position, float global_speed, float speed_percentage,uint3 id, float min_distance)
 {
     float new_position_x;
     float new_position_y;
-    
     float angle_of_movement;
+    float distance_magnitude;
+    
+    // new code
+    float x_difference;
+    float y_difference;
+    
+    x_difference = (current_position.x - target_position.x);
+    y_difference = (current_position.y - target_position.y);
+    
+    if (abs(x_difference) < min_distance && abs(y_difference) < min_distance)
+    {
+        return float2(0, 0);
+    }
+    else if (x_difference == 0)
+    {
+        angle_of_movement = (PI / 2);
+    }
+    else if (y_difference == 0)
+    {
+        angle_of_movement == 0;
+    }
+    else if (x_difference > 0 && y_difference > 0)
+    {
+        angle_of_movement = atan(y_difference / x_difference) + (PI / 2);
+    }
+    else if (x_difference > 0 && y_difference < 0)
+    {
+        angle_of_movement = atan(x_difference / y_difference) + ((PI / 2) * 3);
+    }
+    else if (x_difference < 0 && y_difference > 0)
+    {
+        angle_of_movement = atan(y_difference / x_difference) + PI;
+    }
+    else if (x_difference < 0 && y_difference < 0) // Working
+    {
+        angle_of_movement = atan(y_difference / x_difference);
+    }
     
     
-    angle_of_movement = atan((target_position.x - current_position.x) / (target_position.y - current_position.y));
-    //debug_buffer[id.x].x = angle_of_movement;
-    
+    debug_buffer[id.x].x = angle_of_movement;
     new_position_x = sin(angle_of_movement);
     new_position_y = cos(angle_of_movement);
     return float2(new_position_x, new_position_y);

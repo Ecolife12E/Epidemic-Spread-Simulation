@@ -24,6 +24,7 @@ public class ComputeManager : MonoBehaviour
 
     public int population_count;
     public float global_speed;
+    public float min_distance;
 
 
     private int buffer_size; // size of each person in bits
@@ -65,6 +66,8 @@ public class ComputeManager : MonoBehaviour
 
         compute_shader.SetBuffer(0, "buffer", buffer);
         compute_shader.SetFloat("global_speed", global_speed);
+        compute_shader.SetFloat("min_distance", min_distance);
+        compute_shader.SetFloat("PI", Mathf.PI);
 
         compute_shader.SetBuffer(0, "debug_buffer", debug_buffer);
 
@@ -89,6 +92,8 @@ public class ComputeManager : MonoBehaviour
         compute_shader.SetBuffer(0, "debug_buffer", debug_buffer);
 
         compute_shader.SetFloat("global_speed", global_speed);
+        compute_shader.SetFloat("min_distance", min_distance);
+        compute_shader.SetFloat("PI", Mathf.PI);
 
 
 
