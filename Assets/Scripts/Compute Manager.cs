@@ -49,13 +49,13 @@ public class ComputeManager : MonoBehaviour
         debug_buffer_data = new Vector2[population_count];
 
         // create the population with some random values
-        for(int i = 0; i < population_count; i++)
+        for (int i = 0; i < population_count; i++)
         {
             buffer_data[i].position = new Vector2(Random.Range(0, texture_width), Random.Range(0, texture_height));
             buffer_data[i].target_position = new Vector2(Random.Range(0, texture_width), Random.Range(0, texture_height));
             buffer_data[i].speed_percentage = (Random.Range(50, 100) / 100);
             buffer_data[i].health_state = 0;
-        }        
+        }
 
         ComputeBuffer buffer = new ComputeBuffer(buffer_data.Length, buffer_size);
         buffer.SetData(buffer_data);
@@ -68,11 +68,14 @@ public class ComputeManager : MonoBehaviour
         compute_shader.SetFloat("global_speed", global_speed);
         compute_shader.SetFloat("min_distance", min_distance);
         compute_shader.SetFloat("PI", Mathf.PI);
+        compute_shader.SetInt("texture_width", texture_width);
+        compute_shader.SetInt("texture_height", texture_height);
 
         compute_shader.SetBuffer(0, "debug_buffer", debug_buffer);
 
         // Allows the Compute Shader to run, with the needed threads
-        compute_shader.Dispatch(0, 512 , 1 , 1);
+        compute_shader.Dispatch(0, 512, 1, 1);
+
 
         buffer.GetData(buffer_data);
         buffer.Dispose();
@@ -81,6 +84,7 @@ public class ComputeManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        render_texture.Release();
         compute_shader.SetTexture(0, "Result", render_texture);
 
         ComputeBuffer buffer = new ComputeBuffer(buffer_data.Length, buffer_size);
@@ -94,6 +98,8 @@ public class ComputeManager : MonoBehaviour
         compute_shader.SetFloat("global_speed", global_speed);
         compute_shader.SetFloat("min_distance", min_distance);
         compute_shader.SetFloat("PI", Mathf.PI);
+        compute_shader.SetInt("texture_width", texture_width);
+        compute_shader.SetInt("texture_height", texture_height);
 
 
 

@@ -22,20 +22,28 @@ float global_speed;
 float min_distance;
 float PI;
 
+int texture_width;
+int texture_height;
+
+
 
 // Functions
-float2 Move_Person(float2 current_position, float2 target_position, float global_speed, float speed_percentage,uint3 id, float min_distance);
+float2 Move_Person(float2 current_position, float2 target_position, float speed);
+float2 New_Target_Position(float seed);
 
 [numthreads(512,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
     
+    buffer[id.x].position = Move_Person(buffer[id.x].position, buffer[id.x].target_position, global_speed);
+
+    if (buffer[id.x].position.x == buffer[id.x].target_position.x && buffer[id.x].position.y == buffer[id.x].target_position.y)
+    {
+        float2 new_target_position = New_Target_Position(sqrt(length(buffer[id.x].position)));
+        debug_buffer[id.x] = new_target_position;
+        buffer[id.x].target_position = new_target_position;
+    }
     
-    
-    float2 position_change;
-    position_change =  Move_Person(buffer[id.x].position, buffer[id.x].target_position, global_speed, buffer[id.x].speed_percentage,id,min_distance);
-    //debug_buffer[id.x] = position_change;
-    buffer[id.x].position += position_change;
     
     if (id.x == 0)
     {
@@ -46,56 +54,34 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     {
         Result[buffer[id.x].position] = float4(1, 1, 1, 0);
     }
+} 
+
+float2 Move_Person(float2 current_position, float2 target_position, float speed)
+{
+    float2 direction = target_position - current_position;
+    
+    float distance = length(direction);
+    
+    if (distance <= speed)
+    {
+        return target_position;
+    }
+    
+    direction /= distance;
+    
+    float2 new_position = current_position + direction * speed;
+    return new_position;
 }
 
 
-
-float2 Move_Person(float2 current_position, float2 target_position, float global_speed, float speed_percentage,uint3 id, float min_distance)
+// Pseudo-Random Number Generator
+float2 New_Target_Position(float seed)
 {
-    float new_position_x;
-    float new_position_y;
-    float angle_of_movement;
-    float distance_magnitude;
+    float random_decimal1 = frac(sin(seed) * 43758.5453);
+    float random_decimal2 = frac(cos(seed) * 43758.5453);
     
-    // new code
-    float x_difference;
-    float y_difference;
+    int new_target_position_x = lerp(0, texture_width, random_decimal1);
+    int new_target_position_y = lerp(0, texture_height, random_decimal2);
     
-    x_difference = (current_position.x - target_position.x);
-    y_difference = (current_position.y - target_position.y);
-    
-    if (abs(x_difference) < min_distance && abs(y_difference) < min_distance)
-    {
-        return float2(0, 0);
-    }
-    else if (x_difference == 0)
-    {
-        angle_of_movement = (PI / 2);
-    }
-    else if (y_difference == 0)
-    {
-        angle_of_movement == 0;
-    }
-    else if (x_difference > 0 && y_difference > 0)
-    {
-        angle_of_movement = atan(y_difference / x_difference) + (PI / 2);
-    }
-    else if (x_difference > 0 && y_difference < 0)
-    {
-        angle_of_movement = atan(x_difference / y_difference) + ((PI / 2) * 3);
-    }
-    else if (x_difference < 0 && y_difference > 0)
-    {
-        angle_of_movement = atan(y_difference / x_difference) + PI;
-    }
-    else if (x_difference < 0 && y_difference < 0) // Working
-    {
-        angle_of_movement = atan(y_difference / x_difference);
-    }
-    
-    
-    debug_buffer[id.x].x = angle_of_movement;
-    new_position_x = sin(angle_of_movement);
-    new_position_y = cos(angle_of_movement);
-    return float2(new_position_x, new_position_y);
-}       
+    return float2(new_target_position_x, new_target_position_y);
+}
