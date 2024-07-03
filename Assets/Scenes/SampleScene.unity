@@ -232,7 +232,7 @@ MonoBehaviour:
   render_texture: {fileID: 0}
   texture_width: 1920
   texture_height: 1080
-  population_count: 100
+  population_count: 100000
   global_speed: 1.87
   min_distance: 25
 --- !u!1660057539 &9223372036854775807

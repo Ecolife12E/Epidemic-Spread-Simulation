@@ -8,9 +8,8 @@ public class ComputeManager : MonoBehaviour
     [SerializeField]
     private RenderTexture render_texture;
 
-
-    public int texture_width;
-    public int texture_height;
+    // DataObject that holds all the needed data
+    public DataObject data_object;
 
 
     public struct Person
@@ -22,11 +21,6 @@ public class ComputeManager : MonoBehaviour
         public int health_state;
     }
 
-    public int population_count;
-    public float global_speed;
-    public float min_distance;
-
-
     private int buffer_size; // size of each person in bits
     private Person[] buffer_data; // array to save population data to
 
@@ -35,7 +29,7 @@ public class ComputeManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        render_texture = new RenderTexture(texture_width, texture_height, 24);
+        render_texture = new RenderTexture(data_object.texture_width, data_object.texture_height, 24);
         render_texture.enableRandomWrite = true;
         render_texture.Create();
 
@@ -44,16 +38,17 @@ public class ComputeManager : MonoBehaviour
 
         // Compute Buffer to hold data being sent to GPU
         buffer_size = sizeof(float) * 5 + sizeof(int);
-        buffer_data = new Person[population_count];
+        buffer_data = new Person[data_object.population_count];
 
-        debug_buffer_data = new Vector2[population_count];
+        debug_buffer_data = new Vector2[data_object.population_count];
 
         // create the population with some random values
-        for (int i = 0; i < population_count; i++)
+        for (int i = 0; i < data_object.population_count; i++)
         {
-            buffer_data[i].position = new Vector2(Random.Range(0, texture_width), Random.Range(0, texture_height));
-            buffer_data[i].target_position = new Vector2(Random.Range(0, texture_width), Random.Range(0, texture_height));
-            buffer_data[i].speed_percentage = (Random.Range(50, 100) / 100);
+            buffer_data[i].position = new Vector2(Random.Range(0, data_object.texture_width), Random.Range(0, data_object.texture_height));
+            buffer_data[i].target_position = new Vector2(Random.Range(0, data_object.texture_width), Random.Range(0, data_object.texture_height));
+            buffer_data[i].speed_percentage = Random.Range(50, 100);
+            Debug.Log(buffer_data[i].speed_percentage);
             buffer_data[i].health_state = 0;
         }
 
@@ -65,11 +60,11 @@ public class ComputeManager : MonoBehaviour
 
 
         compute_shader.SetBuffer(0, "buffer", buffer);
-        compute_shader.SetFloat("global_speed", global_speed);
-        compute_shader.SetFloat("min_distance", min_distance);
+        compute_shader.SetFloat("global_speed", data_object.global_speed);
+        compute_shader.SetFloat("min_distance", data_object.min_distance);
         compute_shader.SetFloat("PI", Mathf.PI);
-        compute_shader.SetInt("texture_width", texture_width);
-        compute_shader.SetInt("texture_height", texture_height);
+        compute_shader.SetInt("texture_width", data_object.texture_width);
+        compute_shader.SetInt("texture_height", data_object.texture_height);
 
         compute_shader.SetBuffer(0, "debug_buffer", debug_buffer);
 
@@ -95,11 +90,11 @@ public class ComputeManager : MonoBehaviour
         debug_buffer.SetData(debug_buffer_data);
         compute_shader.SetBuffer(0, "debug_buffer", debug_buffer);
 
-        compute_shader.SetFloat("global_speed", global_speed);
-        compute_shader.SetFloat("min_distance", min_distance);
+        compute_shader.SetFloat("global_speed", data_object.global_speed);
+        compute_shader.SetFloat("min_distance", data_object.min_distance);
         compute_shader.SetFloat("PI", Mathf.PI);
-        compute_shader.SetInt("texture_width", texture_width);
-        compute_shader.SetInt("texture_height", texture_height);
+        compute_shader.SetInt("texture_width", data_object.texture_width);
+        compute_shader.SetInt("texture_height", data_object.texture_height);
 
 
 

@@ -34,8 +34,8 @@ float2 New_Target_Position(float seed);
 [numthreads(512,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-    
-    buffer[id.x].position = Move_Person(buffer[id.x].position, buffer[id.x].target_position, global_speed);
+    float person_speed = global_speed / buffer[id.x].speed_percentage;
+    buffer[id.x].position = Move_Person(buffer[id.x].position, buffer[id.x].target_position, person_speed);
 
     if (buffer[id.x].position.x == buffer[id.x].target_position.x && buffer[id.x].position.y == buffer[id.x].target_position.y)
     {
@@ -77,8 +77,8 @@ float2 Move_Person(float2 current_position, float2 target_position, float speed)
 // Pseudo-Random Number Generator
 float2 New_Target_Position(float seed)
 {
-    float random_decimal1 = frac(sin(seed) * 43758.5453);
-    float random_decimal2 = frac(cos(seed) * 43758.5453);
+    float random_decimal1 = frac(sin(seed * 12.5439) * 43758.5453);
+    float random_decimal2 = frac(cos(seed * 12.5439) * 43758.5453);
     
     int new_target_position_x = lerp(0, texture_width, random_decimal1);
     int new_target_position_y = lerp(0, texture_height, random_decimal2);
