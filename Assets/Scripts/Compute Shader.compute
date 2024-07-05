@@ -21,6 +21,8 @@ RWStructuredBuffer<float2> debug_buffer;
 float global_speed;
 float min_distance;
 float PI;
+float radius;
+int number_of_sensors;
 
 int texture_width;
 int texture_height;
@@ -30,6 +32,7 @@ int texture_height;
 // Functions
 float2 Move_Person(float2 current_position, float2 target_position, float speed);
 float2 New_Target_Position(float seed);
+void Draw_Edge_Circle(float start_x, float start_y, float radius,uint3 id);
 
 [numthreads(512,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
@@ -40,10 +43,11 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     if (buffer[id.x].position.x == buffer[id.x].target_position.x && buffer[id.x].position.y == buffer[id.x].target_position.y)
     {
         float2 new_target_position = New_Target_Position(sqrt(length(buffer[id.x].position)));
-        debug_buffer[id.x] = new_target_position;
+        //debug_buffer[id.x] = new_target_position;
         buffer[id.x].target_position = new_target_position;
     }
     
+    //Draw_Edge_Circle(buffer[id.x].position.x, buffer[id.x].position.y, radius,id);
     
     if (id.x == 0)
     {
@@ -54,6 +58,19 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     {
         Result[buffer[id.x].position] = float4(1, 1, 1, 0);
     }
+    
+    
+    
+    [unroll(floor(360/number_of_sensors))]
+    for (int i = 0; i <= 360; i += 360 / number_of_sensors)
+    {
+        float angle_in_radians = radians(i);
+        float x_ratio = cos(angle_in_radians);
+        float y_ratio = sin(angle_in_radians);
+        float2 sensor_position = float2(buffer[id.x].position.x + (radius * x_ratio), buffer[id.x].position.y + (radius * y_ratio));
+        Result[sensor_position] = float4(0, 1, 0, 0);
+    }
+
 } 
 
 float2 Move_Person(float2 current_position, float2 target_position, float speed)
@@ -84,4 +101,19 @@ float2 New_Target_Position(float seed)
     int new_target_position_y = lerp(0, texture_height, random_decimal2);
     
     return float2(new_target_position_x, new_target_position_y);
+}
+
+
+void Draw_Edge_Circle(float start_x, float start_y, float radius, uint3 id)
+{
+    [unroll(10)]
+    for (float i = 0; i < (2 * PI); i += (PI / 10))
+    {
+        float sensor_x = start_x + (radius * cos(i));
+        float sensor_y = start_y + (radius * sin(i));
+        
+        Result[float2(floor(buffer[id.x].position.x + sensor_x), floor(buffer[id.x].position.y + sensor_y))] == float4(0, 1, 0, 1);
+        debug_buffer[0] = i;
+    }
+
 }

@@ -13,6 +13,11 @@ public class DataObject : ScriptableObject
     public int population_count;
     public float global_speed;
     public int min_distance;
+    [Range(1,360)]
+    public int number_of_sensors;
 
+
+    [Header("Disease Model")]
+    public float radius;
 
 }

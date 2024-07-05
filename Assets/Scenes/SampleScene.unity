@@ -229,12 +229,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   compute_shader: {fileID: 7200000, guid: 533c0c51dc6bdf0498b53293b547d678, type: 3}
-  render_texture: {fileID: 0}
-  texture_width: 1920
-  texture_height: 1080
-  population_count: 100000
-  global_speed: 1.87
-  min_distance: 25
+  render_texture: {fileID: 8400000, guid: e2d3ee44d26364e4d8f3ad7e9a96976c, type: 2}
+  data_object: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

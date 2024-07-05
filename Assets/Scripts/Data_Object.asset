@@ -12,8 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3aab3062375e7a346a0cac3cadf4cf08, type: 3}
   m_Name: Data_Object
   m_EditorClassIdentifier: 
-  texture_width: 0
-  texture_height: 0
-  population_count: 0
-  global_speed: 0
-  min_distance: 0
+  texture_width: 1920
+  texture_height: 1080
+  population_count: 1000
+  global_speed: 10
+  min_distance: 1
+  number_of_sensors: 46
+  radius: 20.3

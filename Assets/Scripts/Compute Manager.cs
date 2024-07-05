@@ -48,7 +48,7 @@ public class ComputeManager : MonoBehaviour
             buffer_data[i].position = new Vector2(Random.Range(0, data_object.texture_width), Random.Range(0, data_object.texture_height));
             buffer_data[i].target_position = new Vector2(Random.Range(0, data_object.texture_width), Random.Range(0, data_object.texture_height));
             buffer_data[i].speed_percentage = Random.Range(50, 100);
-            Debug.Log(buffer_data[i].speed_percentage);
+            //Debug.Log(buffer_data[i].speed_percentage);
             buffer_data[i].health_state = 0;
         }
 
@@ -65,6 +65,8 @@ public class ComputeManager : MonoBehaviour
         compute_shader.SetFloat("PI", Mathf.PI);
         compute_shader.SetInt("texture_width", data_object.texture_width);
         compute_shader.SetInt("texture_height", data_object.texture_height);
+        compute_shader.SetFloat("radius", data_object.radius);
+        compute_shader.SetInt("number_of_sensors", data_object.number_of_sensors);
 
         compute_shader.SetBuffer(0, "debug_buffer", debug_buffer);
 
@@ -95,6 +97,8 @@ public class ComputeManager : MonoBehaviour
         compute_shader.SetFloat("PI", Mathf.PI);
         compute_shader.SetInt("texture_width", data_object.texture_width);
         compute_shader.SetInt("texture_height", data_object.texture_height);
+        compute_shader.SetFloat("radius", data_object.radius);
+        compute_shader.SetInt("number_of_sensors", data_object.number_of_sensors);
 
 
 
