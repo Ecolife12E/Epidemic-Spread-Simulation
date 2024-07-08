@@ -14,8 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   texture_width: 1920
   texture_height: 1080
-  population_count: 1000
+  population_count: 300000
   global_speed: 10
   min_distance: 1
-  number_of_sensors: 46
-  radius: 20.3
+  number_of_sensors: 22
+  show_sensors: 0
+  is_reccuring: 1
+  radius: 7.9
+  infectious_time: {x: 5, y: 7}
+  recovering_time: {x: 2, y: 6}

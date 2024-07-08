@@ -230,7 +230,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   compute_shader: {fileID: 7200000, guid: 533c0c51dc6bdf0498b53293b547d678, type: 3}
   render_texture: {fileID: 8400000, guid: e2d3ee44d26364e4d8f3ad7e9a96976c, type: 2}
-  data_object: {fileID: 0}
+  data_object: {fileID: 11400000, guid: ba1ccb4f81e3b4048a17edf6d8c2cfb5, type: 2}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

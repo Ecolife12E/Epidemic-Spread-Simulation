@@ -15,9 +15,12 @@ public class DataObject : ScriptableObject
     public int min_distance;
     [Range(1,360)]
     public int number_of_sensors;
+    public bool show_sensors;
+    public bool is_reccuring;
 
 
     [Header("Disease Model")]
     public float radius;
-
+    public Vector2 infectious_time;
+    public Vector2 recovering_time;
 }

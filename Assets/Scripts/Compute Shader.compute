@@ -12,6 +12,7 @@ struct Person
     float2 target_position;
     float speed_percentage;
     int health_status;
+    float remaining_time;
 };
 
 RWStructuredBuffer<Person> buffer;
@@ -23,16 +24,26 @@ float min_distance;
 float PI;
 float radius;
 int number_of_sensors;
-
+bool show_sensors;
 int texture_width;
 int texture_height;
+float deltatime;
+float max_infectious_time;
+float min_infectious_time;
+float max_recovering_time;
+float min_recovering_time;
 
 
 
 // Functions
 float2 Move_Person(float2 current_position, float2 target_position, float speed);
 float2 New_Target_Position(float seed);
-void Draw_Edge_Circle(float start_x, float start_y, float radius,uint3 id);
+float4 Return_Colour(uint health_status);
+float Random_Value(float seed);
+void Become_Infected(uint3 id);
+void Become_Healthy(uint3 id);
+void Become_Recovering(uint3 id);
+
 
 [numthreads(512,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
@@ -47,28 +58,44 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         buffer[id.x].target_position = new_target_position;
     }
     
-    //Draw_Edge_Circle(buffer[id.x].position.x, buffer[id.x].position.y, radius,id);
     
-    if (id.x == 0)
+    if (buffer[id.x].health_status != 0)
     {
-        Result[buffer[id.x].position] = float4(1, 0, 0, 0);
-        Result[buffer[id.x].target_position] = float4(0, 1, 0, 0);
-    }
-    else
-    {
-        Result[buffer[id.x].position] = float4(1, 1, 1, 0);
+        buffer[id.x].remaining_time -= deltatime;
+        if ( buffer[id.x].health_status == 2 && buffer[id.x].remaining_time < 0)
+        {
+            Become_Healthy(id);
+        }
+        else if (buffer[id.x].health_status == 1 && buffer[id.x].remaining_time < 0)
+        {
+            Become_Recovering(id);
+
+        }
+
     }
     
     
+    
+    float4 point_colour = Return_Colour(buffer[id.x].health_status);
+    Result[buffer[id.x].position] = point_colour;
     
     [unroll(floor(360/number_of_sensors))]
     for (int i = 0; i <= 360; i += 360 / number_of_sensors)
     {
-        float angle_in_radians = radians(i);
+        float angle_in_radians = radians(i); // Converts degrees to radians
         float x_ratio = cos(angle_in_radians);
         float y_ratio = sin(angle_in_radians);
+        
         float2 sensor_position = float2(buffer[id.x].position.x + (radius * x_ratio), buffer[id.x].position.y + (radius * y_ratio));
-        Result[sensor_position] = float4(0, 1, 0, 0);
+        
+        if ((Result[sensor_position].r == 1 && Result[sensor_position].g == 0 && Result[sensor_position].b == 0) && buffer[id.x].health_status == 0)
+        {
+            Become_Infected(id);
+        }
+        else if (show_sensors)
+        {
+            Result[sensor_position] = float4(0, 1, 0, 0);
+        }
     }
 
 } 
@@ -103,17 +130,47 @@ float2 New_Target_Position(float seed)
     return float2(new_target_position_x, new_target_position_y);
 }
 
-
-void Draw_Edge_Circle(float start_x, float start_y, float radius, uint3 id)
+float Random_Value(float seed)
 {
-    [unroll(10)]
-    for (float i = 0; i < (2 * PI); i += (PI / 10))
-    {
-        float sensor_x = start_x + (radius * cos(i));
-        float sensor_y = start_y + (radius * sin(i));
-        
-        Result[float2(floor(buffer[id.x].position.x + sensor_x), floor(buffer[id.x].position.y + sensor_y))] == float4(0, 1, 0, 1);
-        debug_buffer[0] = i;
-    }
+    float random_decimal = frac(sin(seed * 12.5439) * 43758.5453);
+    return random_decimal;
+}
 
+
+float4 Return_Colour(uint health_status)
+{
+    [call] switch (health_status)
+    {
+        case 0:
+            return float4(1, 1, 1, 0);
+        
+        case 1:
+            return float4(1, 0, 0, 0);
+        
+        case 2:
+            return float4(.75f, .75f, .75f, 0);
+        
+        default:
+            return float4(0, 0, 1, 0);
+        
+    }
+}
+
+void Become_Infected(uint3 id)
+{
+    buffer[id.x].health_status = 1;
+    buffer[id.x].remaining_time = lerp(min_infectious_time, max_infectious_time, Random_Value(buffer[id.x].position.x));
+}
+
+void Become_Recovering(uint3 id)
+{
+    buffer[id.x].health_status = 2;
+    buffer[id.x].remaining_time = lerp(min_recovering_time, max_recovering_time, Random_Value(buffer[id.x].position.y));
+}
+
+
+
+void Become_Healthy(uint3 id)
+{
+    buffer[id.x].health_status = 0;
 }

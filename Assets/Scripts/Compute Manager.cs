@@ -19,12 +19,22 @@ public class ComputeManager : MonoBehaviour
 
         public float speed_percentage;
         public int health_state;
+
+        public float remaining_time;
     }
 
+   
     private int buffer_size; // size of each person in bits
     private Person[] buffer_data; // array to save population data to
 
     private Vector2[] debug_buffer_data;
+
+
+
+
+
+
+
 
     // Start is called before the first frame update
     void Start()
@@ -37,7 +47,7 @@ public class ComputeManager : MonoBehaviour
         compute_shader.SetTexture(0, "Result", render_texture);
 
         // Compute Buffer to hold data being sent to GPU
-        buffer_size = sizeof(float) * 5 + sizeof(int);
+        buffer_size = sizeof(float) * 6 + sizeof(int);
         buffer_data = new Person[data_object.population_count];
 
         debug_buffer_data = new Vector2[data_object.population_count];
@@ -48,8 +58,16 @@ public class ComputeManager : MonoBehaviour
             buffer_data[i].position = new Vector2(Random.Range(0, data_object.texture_width), Random.Range(0, data_object.texture_height));
             buffer_data[i].target_position = new Vector2(Random.Range(0, data_object.texture_width), Random.Range(0, data_object.texture_height));
             buffer_data[i].speed_percentage = Random.Range(50, 100);
-            //Debug.Log(buffer_data[i].speed_percentage);
-            buffer_data[i].health_state = 0;
+            buffer_data[i].remaining_time = data_object.infectious_time.y;
+
+            if( i == 0)
+            {
+                buffer_data[i].health_state = 1;
+            }
+            else
+            {
+                buffer_data[i].health_state = 0;
+            }
         }
 
         ComputeBuffer buffer = new ComputeBuffer(buffer_data.Length, buffer_size);
@@ -67,8 +85,13 @@ public class ComputeManager : MonoBehaviour
         compute_shader.SetInt("texture_height", data_object.texture_height);
         compute_shader.SetFloat("radius", data_object.radius);
         compute_shader.SetInt("number_of_sensors", data_object.number_of_sensors);
-
+        compute_shader.SetBool("show_sensors", data_object.show_sensors);
         compute_shader.SetBuffer(0, "debug_buffer", debug_buffer);
+        compute_shader.SetFloat("deltatime", Time.deltaTime);
+        compute_shader.SetFloat("min_infectious_time", data_object.infectious_time.x);
+        compute_shader.SetFloat("max_infectious_time", data_object.infectious_time.y);
+        compute_shader.SetFloat("min_recovering_time", data_object.recovering_time.x);
+        compute_shader.SetFloat("max_recovering_time", data_object.recovering_time.y);
 
         // Allows the Compute Shader to run, with the needed threads
         compute_shader.Dispatch(0, 512, 1, 1);
@@ -99,8 +122,12 @@ public class ComputeManager : MonoBehaviour
         compute_shader.SetInt("texture_height", data_object.texture_height);
         compute_shader.SetFloat("radius", data_object.radius);
         compute_shader.SetInt("number_of_sensors", data_object.number_of_sensors);
-
-
+        compute_shader.SetBool("show_sensors", data_object.show_sensors);
+        compute_shader.SetFloat("deltatime", Time.deltaTime);
+        compute_shader.SetFloat("min_infectious_time", data_object.infectious_time.x);
+        compute_shader.SetFloat("max_infectious_time", data_object.infectious_time.y);
+        compute_shader.SetFloat("min_recovering_time", data_object.recovering_time.x);
+        compute_shader.SetFloat("max_recovering_time", data_object.recovering_time.y);
 
         compute_shader.Dispatch(0, 512, 1, 1);
 
@@ -108,7 +135,7 @@ public class ComputeManager : MonoBehaviour
         debug_buffer.GetData(debug_buffer_data);
 
         //Debug.Log(buffer_data[0].position + buffer_data[0].target_position);
-        Debug.Log(debug_buffer_data[0]);
+        //Debug.Log(debug_buffer_data[0]);
 
         buffer.Dispose();
         debug_buffer.Dispose();
