@@ -32,6 +32,7 @@ float max_infectious_time;
 float min_infectious_time;
 float max_recovering_time;
 float min_recovering_time;
+bool is_recursive;
 
 
 
@@ -62,11 +63,12 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     if (buffer[id.x].health_status != 0)
     {
         buffer[id.x].remaining_time -= deltatime;
-        if ( buffer[id.x].health_status == 2 && buffer[id.x].remaining_time < 0)
+        if ((buffer[id.x].health_status == 2 && buffer[id.x].remaining_time < 0))
         {
             Become_Healthy(id);
+            
         }
-        else if (buffer[id.x].health_status == 1 && buffer[id.x].remaining_time < 0)
+        else if ((buffer[id.x].health_status == 1 && buffer[id.x].remaining_time < 0)  && is_recursive)
         {
             Become_Recovering(id);
 
@@ -147,7 +149,7 @@ float4 Return_Colour(uint health_status)
         case 1:
             return float4(1, 0, 0, 0);
         
-        case 2:
+        case 20:
             return float4(.75f, .75f, .75f, 0);
         
         default:
@@ -167,8 +169,6 @@ void Become_Recovering(uint3 id)
     buffer[id.x].health_status = 2;
     buffer[id.x].remaining_time = lerp(min_recovering_time, max_recovering_time, Random_Value(buffer[id.x].position.y));
 }
-
-
 
 void Become_Healthy(uint3 id)
 {

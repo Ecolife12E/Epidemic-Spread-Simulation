@@ -92,6 +92,7 @@ public class ComputeManager : MonoBehaviour
         compute_shader.SetFloat("max_infectious_time", data_object.infectious_time.y);
         compute_shader.SetFloat("min_recovering_time", data_object.recovering_time.x);
         compute_shader.SetFloat("max_recovering_time", data_object.recovering_time.y);
+        compute_shader.SetBool("is_recursive", data_object.is_reccuring);
 
         // Allows the Compute Shader to run, with the needed threads
         compute_shader.Dispatch(0, 512, 1, 1);
@@ -128,6 +129,7 @@ public class ComputeManager : MonoBehaviour
         compute_shader.SetFloat("max_infectious_time", data_object.infectious_time.y);
         compute_shader.SetFloat("min_recovering_time", data_object.recovering_time.x);
         compute_shader.SetFloat("max_recovering_time", data_object.recovering_time.y);
+        compute_shader.SetBool("is_reccursive", data_object.is_reccuring);
 
         compute_shader.Dispatch(0, 512, 1, 1);
 
