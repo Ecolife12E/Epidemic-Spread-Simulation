@@ -2,7 +2,7 @@
 #pragma kernel CSMain
 #pragma kernel CSMain
 
-// with cs.SetTexture
+// the renderTexture that will be the output of the compute shader
 RWTexture2D<float4> Result;
 
 // Same Struct as in C# but in HLSL
@@ -49,9 +49,12 @@ void Become_Recovering(uint3 id);
 [numthreads(512,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
+    // calculated the max magnitude that the person can move in one frame
     float person_speed = global_speed / buffer[id.x].speed_percentage;
+    // moves the point towards the target_position;
     buffer[id.x].position = Move_Person(buffer[id.x].position, buffer[id.x].target_position, person_speed);
 
+    // if the point has reached its target position
     if (buffer[id.x].position.x == buffer[id.x].target_position.x && buffer[id.x].position.y == buffer[id.x].target_position.y)
     {
         float2 new_target_position = New_Target_Position(sqrt(length(buffer[id.x].position)));
@@ -59,28 +62,29 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         buffer[id.x].target_position = new_target_position;
     }
     
-    
+    // if the point is not healthy
     if (buffer[id.x].health_status != 0)
     {
+        // reduced the remaining time for each point by the time it takes to render the frame
         buffer[id.x].remaining_time -= deltatime;
+        
+        // if the point is in the recovered state and its remaining time is negative
         if ((buffer[id.x].health_status == 2 && buffer[id.x].remaining_time < 0))
         {
-            Become_Healthy(id);
-            
+            Become_Healthy(id);   
         }
+        // if the point is in the infected state and its remaining time is negative
         else if ((buffer[id.x].health_status == 1 && buffer[id.x].remaining_time < 0)  && is_recursive)
         {
             Become_Recovering(id);
-
         }
-
     }
-    
-    
-    
+  
+    // writes the pixel with the colour at the position of the person
     float4 point_colour = Return_Colour(buffer[id.x].health_status);
     Result[buffer[id.x].position] = point_colour;
     
+    // Loops around the point checking the sensors at a radius from the centre point
     [unroll(floor(360/number_of_sensors))]
     for (int i = 0; i <= 360; i += 360 / number_of_sensors)
     {
@@ -92,6 +96,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         
         if ((Result[sensor_position].r == 1 && Result[sensor_position].g == 0 && Result[sensor_position].b == 0) && buffer[id.x].health_status == 0)
         {
+            // If the sensors detect an infected person and the current point is healthy: 
             Become_Infected(id);
         }
         else if (show_sensors)
@@ -104,17 +109,22 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
 float2 Move_Person(float2 current_position, float2 target_position, float speed)
 {
+    // calculates the difference between the target and current position
     float2 direction = target_position - current_position;
     
+    // calculates the magnitude of the difference i.e x^2 + y^2
     float distance = length(direction);
     
+    // if the distance is smaller than the max distance moved
     if (distance <= speed)
     {
         return target_position;
     }
     
+    // This gives the unitary x and y values is the magnatude was 1
     direction /= distance;
     
+    // the new position is the current position + the unitary values muliplyied by speed
     float2 new_position = current_position + direction * speed;
     return new_position;
 }
@@ -123,54 +133,64 @@ float2 Move_Person(float2 current_position, float2 target_position, float speed)
 // Pseudo-Random Number Generator
 float2 New_Target_Position(float seed)
 {
+    // takes the fractional component of the trig values multiplied by arbitray values
     float random_decimal1 = frac(sin(seed * 12.5439) * 43758.5453);
     float random_decimal2 = frac(cos(seed * 12.5439) * 43758.5453);
     
+    // lerps using the random value produced between the screen so the points do not move out of bounds
     int new_target_position_x = lerp(0, texture_width, random_decimal1);
     int new_target_position_y = lerp(0, texture_height, random_decimal2);
     
+    // returns the new position
     return float2(new_target_position_x, new_target_position_y);
 }
 
 float Random_Value(float seed)
 {
+    // takes the fractional componenet of the sin values
     float random_decimal = frac(sin(seed * 12.5439) * 43758.5453);
     return random_decimal;
 }
 
-
+// returns the correct colour based on the health_status of the person
 float4 Return_Colour(uint health_status)
 {
     [call] switch (health_status)
     {
-        case 0:
+        case 0: // healthy point
             return float4(1, 1, 1, 0);
         
-        case 1:
+        case 1: // infected point
             return float4(1, 0, 0, 0);
         
-        case 20:
+        case 2: // recovering point
             return float4(.75f, .75f, .75f, 0);
         
-        default:
+        default: // default if no health status is given
             return float4(0, 0, 1, 0);
         
     }
 }
 
+// function to be run when the point becomes infected
 void Become_Infected(uint3 id)
 {
+    // changes health status so the colour reflects the change
     buffer[id.x].health_status = 1;
+    // creates random remaining time to stay in this state based on the user inputted values
     buffer[id.x].remaining_time = lerp(min_infectious_time, max_infectious_time, Random_Value(buffer[id.x].position.x));
 }
 
 void Become_Recovering(uint3 id)
 {
+    // changes health status so the colour reflects the change
     buffer[id.x].health_status = 2;
+    // creates random remaining time to stay in this state based on the user inputted values
     buffer[id.x].remaining_time = lerp(min_recovering_time, max_recovering_time, Random_Value(buffer[id.x].position.y));
 }
 
 void Become_Healthy(uint3 id)
 {
+    // changes health state so that the colour reflects the change
     buffer[id.x].health_status = 0;
 }
