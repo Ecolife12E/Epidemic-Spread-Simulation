@@ -5,6 +5,11 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "Data_Object", order = 1)]
 public class DataObject : ScriptableObject
 {
+    [Header("Simulation Details")]
+    public int num_of_healthy;
+    public int num_of_infected;
+    public int num_of_recovered;
+
     [Header("Texture Settings")]
     public int texture_width;
     public int texture_height;

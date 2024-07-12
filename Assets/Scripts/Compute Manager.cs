@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class ComputeManager : MonoBehaviour
 {
@@ -16,16 +17,25 @@ public class ComputeManager : MonoBehaviour
     {
         public Vector2 position;
         public Vector2 target_position;
-
         public float speed_percentage;
         public int health_state;
-
         public float remaining_time;
+    }
+
+    public struct Data_Struct
+    {
+        public int number_of_healthy;
+        public int number_of_infected;
+        public int number_of_recovered;
     }
 
    
     private int buffer_size; // size of each person in bits
     private Person[] buffer_data; // array to save population data to
+
+    private int data_buffer_size; // sizee of Data_Struct in bits
+    private Data_Struct[] data_buffer_data;
+
 
     private Vector2[] debug_buffer_data;
 
@@ -47,6 +57,9 @@ public class ComputeManager : MonoBehaviour
 
         debug_buffer_data = new Vector2[data_object.population_count];
 
+        data_buffer_size = sizeof(int) * 3;
+        data_buffer_data = new Data_Struct[1]; // only one instance as there is no need for more counters.
+
         // create the population with some random values
         for (int i = 0; i < data_object.population_count; i++)
         {
@@ -63,11 +76,13 @@ public class ComputeManager : MonoBehaviour
             if( i == 0)
             {
                 buffer_data[i].health_state = 1;
+                data_buffer_data[0].number_of_infected += 1;
             }
             else
             {
                 // sets each point to being of healthy state
                 buffer_data[i].health_state = 0;
+                data_buffer_data[0].number_of_healthy += 1;
             }
         }
 
@@ -75,13 +90,20 @@ public class ComputeManager : MonoBehaviour
         ComputeBuffer buffer = new ComputeBuffer(buffer_data.Length, buffer_size);
         // fills the buffer with the data from the buffer_data array
         buffer.SetData(buffer_data);
-        
+
+        ComputeBuffer data_buffer = new ComputeBuffer(data_buffer_data.Length, data_buffer_size);
+        data_buffer.SetData(data_buffer_data);
+
+
+
         // another buffer for debugging
         ComputeBuffer debug_buffer = new ComputeBuffer(debug_buffer_data.Length, sizeof(float) * 2);
         debug_buffer.SetData(debug_buffer_data);
 
         // passing through of all the global variables in to the compute shader
         compute_shader.SetBuffer(0, "buffer", buffer);
+        compute_shader.SetBuffer(0, "data_buffer", data_buffer);
+
         compute_shader.SetFloat("global_speed", data_object.global_speed);
         compute_shader.SetFloat("min_distance", data_object.min_distance);
         compute_shader.SetFloat("PI", Mathf.PI);
@@ -99,11 +121,14 @@ public class ComputeManager : MonoBehaviour
         compute_shader.SetBool("is_recursive", data_object.is_reccuring);
 
         // Allows the Compute Shader to run, with the needed threads
-        compute_shader.Dispatch(0, 512, 1, 1);
+        compute_shader.Dispatch(0, 1024, 1, 1);
 
         // retrieves the processed data from the buffer then deleting the buffer
         buffer.GetData(buffer_data);
         buffer.Dispose();
+
+        data_buffer.GetData(data_buffer_data);
+        data_buffer.Dispose();
     }
 
     // Update is called once per frame
@@ -123,6 +148,9 @@ public class ComputeManager : MonoBehaviour
         debug_buffer.SetData(debug_buffer_data);
         compute_shader.SetBuffer(0, "debug_buffer", debug_buffer);
 
+        ComputeBuffer data_buffer = new ComputeBuffer(data_buffer_data.Length, data_buffer_size);
+        data_buffer.SetData(data_buffer_data);
+        compute_shader.SetBuffer(0, "data_buffer", data_buffer);
 
         // passes through the global variables for the Compute shader to use.
         compute_shader.SetFloat("global_speed", data_object.global_speed);
@@ -140,7 +168,7 @@ public class ComputeManager : MonoBehaviour
         compute_shader.SetFloat("max_recovering_time", data_object.recovering_time.y);
         compute_shader.SetBool("is_reccursive", data_object.is_reccuring);
 
-        compute_shader.Dispatch(0, 512, 1, 1);
+        compute_shader.Dispatch(0, 1024, 1, 1);
 
         // retrieves data from the compute buffers and then deletes the buffers.
         buffer.GetData(buffer_data);
@@ -148,11 +176,22 @@ public class ComputeManager : MonoBehaviour
 
         buffer.Dispose();
         debug_buffer.Dispose();
+
+        data_buffer.GetData(data_buffer_data);
+        data_buffer.Dispose();
+        UpdateData(data_buffer_data);
     }
 
     void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
         // places the result of the graphics onto the screen
         Graphics.Blit(render_texture, destination);
+    }
+
+    void UpdateData(Data_Struct[] data)
+    {
+        data_object.num_of_healthy = data[0].number_of_healthy;
+        data_object.num_of_infected = data[0].number_of_infected;
+        data_object.num_of_recovered = data[0].number_of_recovered;
     }
 }

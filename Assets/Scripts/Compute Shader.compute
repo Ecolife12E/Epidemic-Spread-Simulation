@@ -5,7 +5,7 @@
 // the renderTexture that will be the output of the compute shader
 RWTexture2D<float4> Result;
 
-// Same Struct as in C# but in HLSL
+// Struct for each person within the simulation
 struct Person
 {
     float2 position;
@@ -15,7 +15,17 @@ struct Person
     float remaining_time;
 };
 
+// Struct for the main data being rercorded
+struct Data_Struct
+{
+    int number_of_healthy;
+    int number_of_infected;
+    int number_of_recovered;
+};
+
+// Createing the buffers
 RWStructuredBuffer<Person> buffer;
+RWStructuredBuffer<Data_Struct> data_buffer;
 RWStructuredBuffer<float2> debug_buffer;
 
 // Variables
@@ -46,7 +56,7 @@ void Become_Healthy(uint3 id);
 void Become_Recovering(uint3 id);
 
 
-[numthreads(512,1,1)]
+[numthreads(1024,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
     // calculated the max magnitude that the person can move in one frame
@@ -168,7 +178,6 @@ float4 Return_Colour(uint health_status)
         
         default: // default if no health status is given
             return float4(0, 0, 1, 0);
-        
     }
 }
 
@@ -179,6 +188,9 @@ void Become_Infected(uint3 id)
     buffer[id.x].health_status = 1;
     // creates random remaining time to stay in this state based on the user inputted values
     buffer[id.x].remaining_time = lerp(min_infectious_time, max_infectious_time, Random_Value(buffer[id.x].position.x));
+    
+    data_buffer[0].number_of_infected += 1;
+    data_buffer[0].number_of_healthy -= 1;
 }
 
 void Become_Recovering(uint3 id)
@@ -187,10 +199,16 @@ void Become_Recovering(uint3 id)
     buffer[id.x].health_status = 2;
     // creates random remaining time to stay in this state based on the user inputted values
     buffer[id.x].remaining_time = lerp(min_recovering_time, max_recovering_time, Random_Value(buffer[id.x].position.y));
+    
+    data_buffer[0].number_of_recovered += 1;
+    data_buffer[0].number_of_infected -= 1;
 }
 
 void Become_Healthy(uint3 id)
 {
     // changes health state so that the colour reflects the change
     buffer[id.x].health_status = 0;
+    
+    data_buffer[0].number_of_healthy += 1;
+    data_buffer[0].number_of_recovered -= 1;
 }

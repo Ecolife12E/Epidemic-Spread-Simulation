@@ -12,14 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3aab3062375e7a346a0cac3cadf4cf08, type: 3}
   m_Name: Data_Object
   m_EditorClassIdentifier: 
+  num_of_healthy: 0
+  num_of_infected: 0
+  num_of_Recovered: 0
   texture_width: 1920
   texture_height: 1080
   population_count: 300000
-  global_speed: 10
+  global_speed: 172.9
   min_distance: 1
   number_of_sensors: 22
   show_sensors: 0
-  is_reccuring: 1
-  radius: 7.9
-  infectious_time: {x: 5, y: 7}
+  is_reccuring: 0
+  radius: 6.32
+  infectious_time: {x: 5, y: 6}
   recovering_time: {x: 2, y: 6}
