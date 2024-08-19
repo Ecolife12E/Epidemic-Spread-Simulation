@@ -73,7 +73,7 @@ public class ComputeManager : MonoBehaviour
             // Gives each point a speed percentage that creates variance
             buffer_data[i].speed_percentage = Random.Range(25, 100);
             // fills the remaining time values with the max time. 
-            buffer_data[i].remaining_time = data_object.infectious_time.y;
+            buffer_data[i].remaining_time = data_object.infection_time.y;
 
             // creates initial infected person
             if( i == 0)
@@ -117,8 +117,8 @@ public class ComputeManager : MonoBehaviour
         compute_shader.SetBool("show_sensors", data_object.show_sensors);
         compute_shader.SetBuffer(0, "debug_buffer", debug_buffer);
         compute_shader.SetFloat("deltatime", Time.deltaTime);
-        compute_shader.SetFloat("min_infectious_time", data_object.infectious_time.x);
-        compute_shader.SetFloat("max_infectious_time", data_object.infectious_time.y);
+        compute_shader.SetFloat("min_infectious_time", data_object.infection_time.x);
+        compute_shader.SetFloat("max_infectious_time", data_object.infection_time.y);
         compute_shader.SetFloat("min_recovering_time", data_object.recovering_time.x);
         compute_shader.SetFloat("max_recovering_time", data_object.recovering_time.y);
         compute_shader.SetBool("is_recursive", data_object.is_reccuring);
@@ -166,8 +166,8 @@ public class ComputeManager : MonoBehaviour
         compute_shader.SetInt("number_of_sensors", data_object.number_of_sensors);
         compute_shader.SetBool("show_sensors", data_object.show_sensors);
         compute_shader.SetFloat("deltatime", Time.deltaTime);
-        compute_shader.SetFloat("min_infectious_time", data_object.infectious_time.x);
-        compute_shader.SetFloat("max_infectious_time", data_object.infectious_time.y);
+        compute_shader.SetFloat("min_infectious_time", data_object.infection_time.x);
+        compute_shader.SetFloat("max_infectious_time", data_object.infection_time.y);
         compute_shader.SetFloat("min_recovering_time", data_object.recovering_time.x);
         compute_shader.SetFloat("max_recovering_time", data_object.recovering_time.y);
         compute_shader.SetBool("is_reccursive", data_object.is_reccuring);

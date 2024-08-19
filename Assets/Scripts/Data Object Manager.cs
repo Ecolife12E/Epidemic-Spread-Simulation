@@ -6,6 +6,7 @@ using UnityEngine;
 public class DataObject : ScriptableObject
 {
     [Header("Simulation Details")]
+    public int simulation_id;
     public int num_of_healthy;
     public int num_of_infected;
     public int num_of_recovered;
@@ -15,7 +16,9 @@ public class DataObject : ScriptableObject
     public int texture_height;
 
     [Header("Population Model")]
+    public int population_id;
     public int population_count;
+    public string population_name;
     public float global_speed;
     public int min_distance;
     [Range(1,360)]
@@ -23,8 +26,10 @@ public class DataObject : ScriptableObject
     public bool show_sensors;
 
     [Header("Disease Model")]
+    public string disease_name;
+    public int disease_id;
     public float radius;
-    public Vector2 infectious_time;
+    public Vector2 infection_time;
     public Vector2 recovering_time;
     public bool is_reccuring;
 
