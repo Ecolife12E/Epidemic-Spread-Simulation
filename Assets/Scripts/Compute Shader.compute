@@ -44,8 +44,6 @@ float max_recovering_time;
 float min_recovering_time;
 bool is_recursive;
 
-
-
 // Functions
 float2 Move_Person(float2 current_position, float2 target_position, float speed);
 float2 New_Target_Position(float seed);
@@ -54,7 +52,6 @@ float Random_Value(float seed);
 void Become_Infected(uint3 id);
 void Become_Healthy(uint3 id);
 void Become_Recovering(uint3 id);
-
 
 [numthreads(1024,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
@@ -88,6 +85,10 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         {
             Become_Recovering(id);
         }
+    }
+    else
+    {
+        debug_buffer[0] = buffer[id.x].position;
     }
   
     // writes the pixel with the colour at the position of the person
@@ -139,7 +140,6 @@ float2 Move_Person(float2 current_position, float2 target_position, float speed)
     return new_position;
 }
 
-
 // Pseudo-Random Number Generator
 float2 New_Target_Position(float seed)
 {
@@ -174,7 +174,7 @@ float4 Return_Colour(uint health_status)
             return float4(1, 0, 0, 0);
         
         case 2: // recovering point
-            return float4(.75f, .75f, .75f, 0);
+            return float4(.5f, .5f, .5f, 0);
         
         default: // default if no health status is given
             return float4(0, 0, 1, 0);
@@ -189,8 +189,10 @@ void Become_Infected(uint3 id)
     // creates random remaining time to stay in this state based on the user inputted values
     buffer[id.x].remaining_time = lerp(min_infectious_time, max_infectious_time, Random_Value(buffer[id.x].position.x));
     
-    data_buffer[0].number_of_infected += 1;
-    data_buffer[0].number_of_healthy -= 1;
+    InterlockedAdd(data_buffer[0].number_of_infected, 1);
+    InterlockedAdd(data_buffer[0].number_of_healthy, -1);
+    
+    //debug_buffer[0].x = fmod(id.x, 1024);
 }
 
 void Become_Recovering(uint3 id)
@@ -200,8 +202,8 @@ void Become_Recovering(uint3 id)
     // creates random remaining time to stay in this state based on the user inputted values
     buffer[id.x].remaining_time = lerp(min_recovering_time, max_recovering_time, Random_Value(buffer[id.x].position.y));
     
-    data_buffer[0].number_of_recovered += 1;
-    data_buffer[0].number_of_infected -= 1;
+    InterlockedAdd(data_buffer[0].number_of_recovered, 1);
+    InterlockedAdd(data_buffer[0].number_of_infected, -1);
 }
 
 void Become_Healthy(uint3 id)
@@ -209,6 +211,7 @@ void Become_Healthy(uint3 id)
     // changes health state so that the colour reflects the change
     buffer[id.x].health_status = 0;
     
-    data_buffer[0].number_of_healthy += 1;
-    data_buffer[0].number_of_recovered -= 1;
+    InterlockedAdd(data_buffer[0].number_of_healthy, 1);
+    InterlockedAdd(data_buffer[0].number_of_recovered, -1);
+
 }

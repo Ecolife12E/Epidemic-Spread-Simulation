@@ -21,11 +21,17 @@ public class DataObject : ScriptableObject
     [Range(1,360)]
     public int number_of_sensors;
     public bool show_sensors;
-    public bool is_reccuring;
-
 
     [Header("Disease Model")]
     public float radius;
     public Vector2 infectious_time;
     public Vector2 recovering_time;
+    public bool is_reccuring;
+
+    public int frame_id;
+
+
+
+
+
 }

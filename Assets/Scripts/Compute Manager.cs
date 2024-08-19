@@ -43,6 +43,9 @@ public class ComputeManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+
+        data_object.frame_id = 0;
+
         // a new texture is creates and we enable RandomWrite so the texture can be modified
         render_texture = new RenderTexture(data_object.texture_width, data_object.texture_height, 24);
         render_texture.enableRandomWrite = true;
@@ -148,6 +151,7 @@ public class ComputeManager : MonoBehaviour
         debug_buffer.SetData(debug_buffer_data);
         compute_shader.SetBuffer(0, "debug_buffer", debug_buffer);
 
+        // Compute Buffer for the Data retrived
         ComputeBuffer data_buffer = new ComputeBuffer(data_buffer_data.Length, data_buffer_size);
         data_buffer.SetData(data_buffer_data);
         compute_shader.SetBuffer(0, "data_buffer", data_buffer);
@@ -174,12 +178,17 @@ public class ComputeManager : MonoBehaviour
         buffer.GetData(buffer_data);
         debug_buffer.GetData(debug_buffer_data);
 
+        //Debug.Log(debug_buffer_data[0]);
+
         buffer.Dispose();
         debug_buffer.Dispose();
 
         data_buffer.GetData(data_buffer_data);
         data_buffer.Dispose();
         UpdateData(data_buffer_data);
+
+        Add_Record_CSV(data_object.frame_id, data_object.num_of_healthy, data_object.num_of_infected, data_object.num_of_recovered, "C:\\Users\\willb\\Unity Projects\\Computer Science Coursework - Epidemic Spread Simulation\\Assets\\Results\\Results.csv");
+        data_object.frame_id++;
     }
 
     void OnRenderImage(RenderTexture source, RenderTexture destination)
@@ -194,4 +203,23 @@ public class ComputeManager : MonoBehaviour
         data_object.num_of_infected = data[0].number_of_infected;
         data_object.num_of_recovered = data[0].number_of_recovered;
     }
+
+
+    public static void Add_Record_CSV(int frame_id, int number_of_healthy, int number_of_infected, int number_of_recovered, string file_path)
+    {
+        try
+        {
+            using (System.IO.StreamWriter csv_file = new System.IO.StreamWriter(@file_path, true))
+            {
+                csv_file.WriteLine(frame_id.ToString() + "," + number_of_healthy.ToString() + "," + number_of_infected.ToString() + "," + number_of_recovered.ToString());
+                Debug.Log(frame_id.ToString() + "," + number_of_healthy.ToString() + "," + number_of_infected.ToString() + "," + number_of_recovered.ToString());
+            }
+        }
+        catch
+        {
+            Debug.Log("Application did a little wrongen");
+        }
+    }
+
+
 }
