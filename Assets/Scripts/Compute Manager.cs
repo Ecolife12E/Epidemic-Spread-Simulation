@@ -186,6 +186,7 @@ public class ComputeManager : MonoBehaviour
         data_buffer.GetData(data_buffer_data);
         data_buffer.Dispose();
         UpdateData(data_buffer_data);
+        DatabaseManager.Save_Simulation();
 
         Add_Record_CSV(data_object.frame_id, data_object.num_of_healthy, data_object.num_of_infected, data_object.num_of_recovered, "C:\\Users\\willb\\Unity Projects\\Computer Science Coursework - Epidemic Spread Simulation\\Assets\\Results\\Results.csv");
         data_object.frame_id++;
