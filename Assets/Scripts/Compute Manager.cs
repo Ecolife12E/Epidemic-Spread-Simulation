@@ -39,6 +39,7 @@ public class ComputeManager : MonoBehaviour
 
     private Vector2[] debug_buffer_data;
 
+    public DatabaseManager database_manager;
 
     // Start is called before the first frame update
     void Start()
@@ -53,6 +54,8 @@ public class ComputeManager : MonoBehaviour
 
         // Passes render_texture to the compute shader under the variable name Result
         compute_shader.SetTexture(0, "Result", render_texture);
+
+
 
         // Compute Buffer to hold data being sent to GPU
         buffer_size = sizeof(float) * 6 + sizeof(int);
@@ -186,7 +189,9 @@ public class ComputeManager : MonoBehaviour
         data_buffer.GetData(data_buffer_data);
         data_buffer.Dispose();
         UpdateData(data_buffer_data);
-        DatabaseManager.Save_Simulation();
+
+        database_manager.Save_Simulation_Results();
+
 
         Add_Record_CSV(data_object.frame_id, data_object.num_of_healthy, data_object.num_of_infected, data_object.num_of_recovered, "C:\\Users\\willb\\Unity Projects\\Computer Science Coursework - Epidemic Spread Simulation\\Assets\\Results\\Results.csv");
         data_object.frame_id++;
@@ -213,7 +218,7 @@ public class ComputeManager : MonoBehaviour
             using (System.IO.StreamWriter csv_file = new System.IO.StreamWriter(@file_path, true))
             {
                 csv_file.WriteLine(frame_id.ToString() + "," + number_of_healthy.ToString() + "," + number_of_infected.ToString() + "," + number_of_recovered.ToString());
-                Debug.Log(frame_id.ToString() + "," + number_of_healthy.ToString() + "," + number_of_infected.ToString() + "," + number_of_recovered.ToString());
+                //Debug.Log(frame_id.ToString() + "," + number_of_healthy.ToString() + "," + number_of_infected.ToString() + "," + number_of_recovered.ToString());
             }
         }
         catch
