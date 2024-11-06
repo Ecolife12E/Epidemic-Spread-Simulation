@@ -41,10 +41,12 @@ public class ComputeManager : MonoBehaviour
 
     public DatabaseManager database_manager;
 
+    private bool Simulation_started;
+
     // Start is called before the first frame update
     void Start()
     {
-
+        Simulation_started = false;
         data_object.frame_id = 0;
 
         // a new texture is creates and we enable RandomWrite so the texture can be modified
@@ -91,110 +93,126 @@ public class ComputeManager : MonoBehaviour
                 data_buffer_data[0].number_of_healthy += 1;
             }
         }
-
-        // creates a Computebuffer setting each person to be buffer_size bits long
-        ComputeBuffer buffer = new ComputeBuffer(buffer_data.Length, buffer_size);
-        // fills the buffer with the data from the buffer_data array
-        buffer.SetData(buffer_data);
-
-        ComputeBuffer data_buffer = new ComputeBuffer(data_buffer_data.Length, data_buffer_size);
-        data_buffer.SetData(data_buffer_data);
+    }
 
 
+    public void Start_Simulation()
+    {
+        if (!Simulation_started)
+        {
+            Simulation_started = true;
+            // creates a Computebuffer setting each person to be buffer_size bits long
+            ComputeBuffer buffer = new ComputeBuffer(buffer_data.Length, buffer_size);
+            // fills the buffer with the data from the buffer_data array
+            buffer.SetData(buffer_data);
 
-        // another buffer for debugging
-        ComputeBuffer debug_buffer = new ComputeBuffer(debug_buffer_data.Length, sizeof(float) * 2);
-        debug_buffer.SetData(debug_buffer_data);
+            ComputeBuffer data_buffer = new ComputeBuffer(data_buffer_data.Length, data_buffer_size);
+            data_buffer.SetData(data_buffer_data);
 
-        // passing through of all the global variables in to the compute shader
-        compute_shader.SetBuffer(0, "buffer", buffer);
-        compute_shader.SetBuffer(0, "data_buffer", data_buffer);
 
-        compute_shader.SetFloat("global_speed", data_object.global_speed);
-        compute_shader.SetFloat("min_distance", data_object.min_distance);
-        compute_shader.SetFloat("PI", Mathf.PI);
-        compute_shader.SetInt("texture_width", data_object.texture_width);
-        compute_shader.SetInt("texture_height", data_object.texture_height);
-        compute_shader.SetFloat("radius", data_object.radius);
-        compute_shader.SetInt("number_of_sensors", data_object.number_of_sensors);
-        compute_shader.SetBool("show_sensors", data_object.show_sensors);
-        compute_shader.SetBuffer(0, "debug_buffer", debug_buffer);
-        compute_shader.SetFloat("deltatime", Time.deltaTime);
-        compute_shader.SetFloat("min_infectious_time", data_object.infection_time.x);
-        compute_shader.SetFloat("max_infectious_time", data_object.infection_time.y);
-        compute_shader.SetFloat("min_recovering_time", data_object.recovering_time.x);
-        compute_shader.SetFloat("max_recovering_time", data_object.recovering_time.y);
-        compute_shader.SetBool("is_recursive", data_object.is_reccuring);
 
-        // Allows the Compute Shader to run, with the needed threads
-        compute_shader.Dispatch(0, 1024, 1, 1);
+            // another buffer for debugging
+            ComputeBuffer debug_buffer = new ComputeBuffer(debug_buffer_data.Length, sizeof(float) * 2);
+            debug_buffer.SetData(debug_buffer_data);
 
-        // retrieves the processed data from the buffer then deleting the buffer
-        buffer.GetData(buffer_data);
-        buffer.Dispose();
+            // passing through of all the global variables in to the compute shader
+            compute_shader.SetBuffer(0, "buffer", buffer);
+            compute_shader.SetBuffer(0, "data_buffer", data_buffer);
 
-        data_buffer.GetData(data_buffer_data);
-        data_buffer.Dispose();
+            compute_shader.SetFloat("global_speed", data_object.global_speed);
+            compute_shader.SetFloat("min_distance", data_object.min_distance);
+            compute_shader.SetFloat("PI", Mathf.PI);
+            compute_shader.SetInt("texture_width", data_object.texture_width);
+            compute_shader.SetInt("texture_height", data_object.texture_height);
+            compute_shader.SetFloat("radius", data_object.radius);
+            compute_shader.SetInt("number_of_sensors", data_object.number_of_sensors);
+            compute_shader.SetBool("show_sensors", data_object.show_sensors);
+            compute_shader.SetBuffer(0, "debug_buffer", debug_buffer);
+            compute_shader.SetFloat("deltatime", Time.deltaTime);
+            compute_shader.SetFloat("min_infectious_time", data_object.infection_time.x);
+            compute_shader.SetFloat("max_infectious_time", data_object.infection_time.y);
+            compute_shader.SetFloat("min_recovering_time", data_object.recovering_time.x);
+            compute_shader.SetFloat("max_recovering_time", data_object.recovering_time.y);
+            compute_shader.SetBool("is_recursive", data_object.is_reccuring);
+
+            // Allows the Compute Shader to run, with the needed threads
+            compute_shader.Dispatch(0, 1024, 1, 1);
+
+            // retrieves the processed data from the buffer then deleting the buffer
+            buffer.GetData(buffer_data);
+            buffer.Dispose();
+
+            data_buffer.GetData(data_buffer_data);
+            data_buffer.Dispose();
+        }
+        else
+        {
+            Simulation_started = false;
+        }
     }
 
     // Update is called once per frame
     void Update()
     {
-        // clears the texture so there are no trails
-        render_texture.Release();
-        compute_shader.SetTexture(0, "Result", render_texture);
+        if (Simulation_started)
+        {
+            // clears the texture so there are no trails
+            render_texture.Release();
+            compute_shader.SetTexture(0, "Result", render_texture);
 
-        // creates a new buffer and fills it with the data from the buffer_data array
-        ComputeBuffer buffer = new ComputeBuffer(buffer_data.Length, buffer_size);
-        buffer.SetData(buffer_data);
-        compute_shader.SetBuffer(0, "buffer", buffer);
+            // creates a new buffer and fills it with the data from the buffer_data array
+            ComputeBuffer buffer = new ComputeBuffer(buffer_data.Length, buffer_size);
+            buffer.SetData(buffer_data);
+            compute_shader.SetBuffer(0, "buffer", buffer);
 
-        // another buffer for debugging
-        ComputeBuffer debug_buffer = new ComputeBuffer(debug_buffer_data.Length, sizeof(float)*2);
-        debug_buffer.SetData(debug_buffer_data);
-        compute_shader.SetBuffer(0, "debug_buffer", debug_buffer);
+            // another buffer for debugging
+            ComputeBuffer debug_buffer = new ComputeBuffer(debug_buffer_data.Length, sizeof(float)*2);
+            debug_buffer.SetData(debug_buffer_data);
+            compute_shader.SetBuffer(0, "debug_buffer", debug_buffer);
 
-        // Compute Buffer for the Data retrived
-        ComputeBuffer data_buffer = new ComputeBuffer(data_buffer_data.Length, data_buffer_size);
-        data_buffer.SetData(data_buffer_data);
-        compute_shader.SetBuffer(0, "data_buffer", data_buffer);
+            // Compute Buffer for the Data retrived
+            ComputeBuffer data_buffer = new ComputeBuffer(data_buffer_data.Length, data_buffer_size);
+            data_buffer.SetData(data_buffer_data);
+            compute_shader.SetBuffer(0, "data_buffer", data_buffer);
 
-        // passes through the global variables for the Compute shader to use.
-        compute_shader.SetFloat("global_speed", data_object.global_speed);
-        compute_shader.SetFloat("min_distance", data_object.min_distance);
-        compute_shader.SetFloat("PI", Mathf.PI);
-        compute_shader.SetInt("texture_width", data_object.texture_width);
-        compute_shader.SetInt("texture_height", data_object.texture_height);
-        compute_shader.SetFloat("radius", data_object.radius);
-        compute_shader.SetInt("number_of_sensors", data_object.number_of_sensors);
-        compute_shader.SetBool("show_sensors", data_object.show_sensors);
-        compute_shader.SetFloat("deltatime", Time.deltaTime);
-        compute_shader.SetFloat("min_infectious_time", data_object.infection_time.x);
-        compute_shader.SetFloat("max_infectious_time", data_object.infection_time.y);
-        compute_shader.SetFloat("min_recovering_time", data_object.recovering_time.x);
-        compute_shader.SetFloat("max_recovering_time", data_object.recovering_time.y);
-        compute_shader.SetBool("is_reccursive", data_object.is_reccuring);
+            // passes through the global variables for the Compute shader to use.
+            compute_shader.SetFloat("global_speed", data_object.global_speed);
+            compute_shader.SetFloat("min_distance", data_object.min_distance);
+            compute_shader.SetFloat("PI", Mathf.PI);
+            compute_shader.SetInt("texture_width", data_object.texture_width);
+            compute_shader.SetInt("texture_height", data_object.texture_height);
+            compute_shader.SetFloat("radius", data_object.radius);
+            compute_shader.SetInt("number_of_sensors", data_object.number_of_sensors);
+            compute_shader.SetBool("show_sensors", data_object.show_sensors);
+            compute_shader.SetFloat("deltatime", Time.deltaTime);
+            compute_shader.SetFloat("min_infectious_time", data_object.infection_time.x);
+            compute_shader.SetFloat("max_infectious_time", data_object.infection_time.y);
+            compute_shader.SetFloat("min_recovering_time", data_object.recovering_time.x);
+            compute_shader.SetFloat("max_recovering_time", data_object.recovering_time.y);
+            compute_shader.SetBool("is_reccursive", data_object.is_reccuring);
 
-        compute_shader.Dispatch(0, 1024, 1, 1);
+            compute_shader.Dispatch(0, 1024, 1, 1);
 
-        // retrieves data from the compute buffers and then deletes the buffers.
-        buffer.GetData(buffer_data);
-        debug_buffer.GetData(debug_buffer_data);
+            // retrieves data from the compute buffers and then deletes the buffers.
+            buffer.GetData(buffer_data);
+            debug_buffer.GetData(debug_buffer_data);
 
-        //Debug.Log(debug_buffer_data[0]);
+            //Debug.Log(debug_buffer_data[0]);
 
-        buffer.Dispose();
-        debug_buffer.Dispose();
+            buffer.Dispose();
+            debug_buffer.Dispose();
 
-        data_buffer.GetData(data_buffer_data);
-        data_buffer.Dispose();
-        UpdateData(data_buffer_data);
+            data_buffer.GetData(data_buffer_data);
+            data_buffer.Dispose();
+            UpdateData(data_buffer_data);
 
-        database_manager.Save_Simulation_Results();
+            database_manager.Save_Simulation_Results();
 
 
-        Add_Record_CSV(data_object.frame_id, data_object.num_of_healthy, data_object.num_of_infected, data_object.num_of_recovered, "C:\\Users\\willb\\Unity Projects\\Computer Science Coursework - Epidemic Spread Simulation\\Assets\\Results\\Results.csv");
-        data_object.frame_id++;
+            Add_Record_CSV(data_object.frame_id, data_object.num_of_healthy, data_object.num_of_infected, data_object.num_of_recovered, "C:\\Users\\willb\\Unity Projects\\Computer Science Coursework - Epidemic Spread Simulation\\Assets\\Results\\Results.csv");
+            data_object.frame_id++;
+        }
+
     }
 
     void OnRenderImage(RenderTexture source, RenderTexture destination)
@@ -226,6 +244,7 @@ public class ComputeManager : MonoBehaviour
             Debug.Log("Application did a little wrongen");
         }
     }
+
 
 
 }

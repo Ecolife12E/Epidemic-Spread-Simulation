@@ -15,13 +15,12 @@ public class DatabaseManager : MonoBehaviour
     void Start()
     {
         Set_Up_Tables();
-        Save_Population();
-        Save_Disease();
         Save_Simulation_Preset();
 
         Get_Max_Sim_ID();
     }
 
+    // Checks for correct tables and linking of foreign keys
     private void Set_Up_Tables()
     {
         using (IDbConnection database_connection = new SqliteConnection(db_uri))
@@ -94,6 +93,7 @@ public class DatabaseManager : MonoBehaviour
         }
     }
 
+    // passes through relavent data to the population table with 
     public void Save_Population()
     {
         using (IDbConnection database_connection = new SqliteConnection(db_uri))
@@ -108,6 +108,8 @@ public class DatabaseManager : MonoBehaviour
                     "global_speed, number_of_sensors)" +
 
                     "VALUES( @Population_Count, @Population_Name, @Global_Speed, @Number_Of_Sensors)";
+
+                // Setting up of the parameters to the data in the data object for saving 
 
                 IDbDataParameter param_population_count = save_population.CreateParameter();
                 param_population_count.ParameterName = "@Population_Count";
@@ -129,6 +131,7 @@ public class DatabaseManager : MonoBehaviour
                 param_number_of_sensors.Value = data_object.number_of_sensors;
                 save_population.Parameters.Add(param_number_of_sensors);
 
+                
                 save_population.ExecuteNonQuery();
             }
         }
@@ -283,7 +286,6 @@ public class DatabaseManager : MonoBehaviour
 
     public void Get_Max_Sim_ID()
     {
-        Debug.Log("Working");
         using (IDbConnection database_connection = new SqliteConnection(db_uri))
         {
             database_connection.Open();
@@ -294,10 +296,72 @@ public class DatabaseManager : MonoBehaviour
 
 
                 data_object.simulation_id = (int)(long)get_max_sim_id.ExecuteScalar() + 1;
-                Debug.Log((long)get_max_sim_id.ExecuteScalar());
+                //Debug.Log((long)get_max_sim_id.ExecuteScalar());
             }
         }
     }
+
+    public void Get_Max_Pop_ID()
+    {
+        using (IDbConnection database_connection = new SqliteConnection(db_uri))
+        {
+            database_connection.Open();
+            using (IDbCommand get_max_pop_id = database_connection.CreateCommand())
+            {
+                get_max_pop_id.CommandText =
+                    "SELECT MAX(population_id) FROM Population_Table";
+
+                data_object.population_id = (int)(long)get_max_pop_id.ExecuteScalar() + 1;
+            }
+        }
+    }
+
+    public void Get_Max_Dis_ID()
+    {
+        using (IDbConnection database_connection = new SqliteConnection(db_uri))
+        {
+            database_connection.Open();
+            using (IDbCommand get_max_dis_id = database_connection.CreateCommand())
+            {
+                get_max_dis_id.CommandText =
+                    "SELECT MAX(disease_id) FROM Disease_Table";
+                
+                data_object.disease_id = (int)(long)get_max_dis_id.ExecuteScalar() + 1;
+            }
+        }
+    }
+
+    public void Load_Population_Preset()
+    {
+        using (IDbConnection database_connection = new SqliteConnection(db_uri))
+        {
+            database_connection.Open();
+            using(IDbCommand load_population = database_connection.CreateCommand())
+            {
+                load_population.CommandText =
+                    "SELECT * FROM Population_Table WHERE population_name == @Given_Population_name";
+
+                IDbDataParameter param_population_name = load_population.CreateParameter();
+                param_population_name.ParameterName = "@Given_Population_name";
+                param_population_name.Value = data_object.population_name;
+                load_population.Parameters.Add(param_population_name);
+
+
+                IDataReader reader = load_population.ExecuteReader();
+                while (reader.Read())
+                {
+                    data_object.population_id = reader.GetInt32(0);
+                    data_object.population_count = reader.GetInt32(1);
+                    data_object.population_name = reader.GetString(2);
+                    data_object.global_speed = reader.GetFloat(3);
+                    data_object.number_of_sensors = reader.GetInt32(4);
+                }
+
+                GuiManager.Reset_Population_static();
+            }
+        }
+    }
+
 
 }
 

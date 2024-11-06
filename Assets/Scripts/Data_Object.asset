@@ -12,23 +12,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3aab3062375e7a346a0cac3cadf4cf08, type: 3}
   m_Name: Data_Object
   m_EditorClassIdentifier: 
-  simulation_id: 5
-  num_of_healthy: 45
-  num_of_infected: 49955
-  num_of_recovered: 0
+  simulation_id: 8
+  num_of_healthy: 6670
+  num_of_infected: 11706
+  num_of_recovered: 31624
   texture_width: 1920
   texture_height: 1080
   population_id: 0
   population_count: 50000
   population_name: Fifty thousand
-  global_speed: 15
+  global_speed: 13.9
   min_distance: 1
   number_of_sensors: 22
   show_sensors: 0
   disease_name: Non Repeating
   disease_id: 0
-  radius: 4.94
-  infection_time: {x: 2, y: 10}
+  radius: 8.17
+  infection_time: {x: 2, y: 5.95}
   recovering_time: {x: 9, y: 10}
-  is_reccuring: 0
-  frame_id: 2919
+  is_reccuring: 1
+  frame_id: 12196
