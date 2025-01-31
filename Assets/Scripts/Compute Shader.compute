@@ -21,6 +21,7 @@ struct Data_Struct
     int number_of_healthy;
     int number_of_infected;
     int number_of_recovered;
+    int number_of_immune;
 };
 
 // Createing the buffers
@@ -33,16 +34,19 @@ float global_speed;
 float min_distance;
 float PI;
 float radius;
-int number_of_sensors;
+uint number_of_sensors;
 bool show_sensors;
-int texture_width;
-int texture_height;
+uint texture_width;
+uint texture_height;
 float deltatime;
 float max_infectious_time;
 float min_infectious_time;
 float max_recovering_time;
 float min_recovering_time;
 bool is_recursive;
+bool immunity;
+float immunity_chance;
+
 
 // Functions
 float2 Move_Person(float2 current_position, float2 target_position, float speed);
@@ -51,7 +55,8 @@ float4 Return_Colour(uint health_status);
 float Random_Value(float seed);
 void Become_Infected(uint3 id);
 void Become_Healthy(uint3 id);
-void Become_Recovering(uint3 id);
+void After_Infection(uint3 id);
+
 
 [numthreads(1024,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
@@ -69,6 +74,8 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         buffer[id.x].target_position = new_target_position;
     }
     
+    
+    
     // if the point is not healthy
     if (buffer[id.x].health_status != 0)
     {
@@ -81,42 +88,45 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             Become_Healthy(id);   
         }
         // if the point is in the infected state and its remaining time is negative
-        else if ((buffer[id.x].health_status == 1 && buffer[id.x].remaining_time < 0)  && is_recursive)
+        else if (buffer[id.x].health_status == 1 && buffer[id.x].remaining_time < 0 && is_recursive)
         {
-            Become_Recovering(id);
+            After_Infection(id);
         }
     }
-    else
-    {
-        debug_buffer[0] = buffer[id.x].position;
-    }
+    
+    debug_buffer[id.x].x = is_recursive;
+    debug_buffer[id.x].y = buffer[id.x].health_status;
   
     // writes the pixel with the colour at the position of the person
     float4 point_colour = Return_Colour(buffer[id.x].health_status);
     Result[buffer[id.x].position] = point_colour;
     
-    // Loops around the point checking the sensors at a radius from the centre point
-    [unroll(floor(360/number_of_sensors))]
-    for (int i = 0; i <= 360; i += 360 / number_of_sensors)
+
+    if (buffer[id.x].health_status == 0)
     {
-        float angle_in_radians = radians(i); // Converts degrees to radians
-        float x_ratio = cos(angle_in_radians);
-        float y_ratio = sin(angle_in_radians);
-        
-        float2 sensor_position = float2(buffer[id.x].position.x + (radius * x_ratio), buffer[id.x].position.y + (radius * y_ratio));
-        
-        if ((Result[sensor_position].r == 1 && Result[sensor_position].g == 0 && Result[sensor_position].b == 0) && buffer[id.x].health_status == 0)
+        // Loops around the point checking the sensors at a radius from the centre point
+        [unroll(floor(360/number_of_sensors))]
+        for (int i = 0; i <= 360; i += 360 / number_of_sensors)
         {
-            // If the sensors detect an infected person and the current point is healthy: 
-            Become_Infected(id);
-        }
-        else if (show_sensors)
-        {
-            Result[sensor_position] = float4(0, 1, 0, 0);
+            float angle_in_radians = radians(i); // Converts degrees to radians
+            float x_ratio = cos(angle_in_radians);
+            float y_ratio = sin(angle_in_radians);
+        
+            float2 sensor_position = float2(buffer[id.x].position.x + (radius * x_ratio), buffer[id.x].position.y + (radius * y_ratio));
+        
+            if ((Result[sensor_position].r == 1 && Result[sensor_position].g == 0 && Result[sensor_position].b == 0))
+            {
+               // If the sensors detect an infected person and the current point is healthy: 
+                Become_Infected(id);
+            }
+            else if (show_sensors)
+            {
+                Result[sensor_position] = float4(0, 1, 0, 0);
+            }
         }
     }
-
 } 
+
 
 float2 Move_Person(float2 current_position, float2 target_position, float speed)
 {
@@ -140,7 +150,8 @@ float2 Move_Person(float2 current_position, float2 target_position, float speed)
     return new_position;
 }
 
-// Pseudo-Random Number Generator
+
+
 float2 New_Target_Position(float seed)
 {
     // takes the fractional component of the trig values multiplied by arbitray values
@@ -155,12 +166,15 @@ float2 New_Target_Position(float seed)
     return float2(new_target_position_x, new_target_position_y);
 }
 
+
+// Pseudo-Random Number Generator
 float Random_Value(float seed)
 {
     // takes the fractional componenet of the sin values
     float random_decimal = frac(sin(seed * 12.5439) * 43758.5453);
     return random_decimal;
 }
+
 
 // returns the correct colour based on the health_status of the person
 float4 Return_Colour(uint health_status)
@@ -176,42 +190,69 @@ float4 Return_Colour(uint health_status)
         case 2: // recovering point
             return float4(.5f, .5f, .5f, 0);
         
+        case 3: // immune point
+            return float4(0, 0.75, 1, 0);
+        
         default: // default if no health status is given
             return float4(0, 0, 1, 0);
     }
 }
 
+
 // function to be run when the point becomes infected
 void Become_Infected(uint3 id)
 {
-    // changes health status so the colour reflects the change
-    buffer[id.x].health_status = 1;
-    // creates random remaining time to stay in this state based on the user inputted values
-    buffer[id.x].remaining_time = lerp(min_infectious_time, max_infectious_time, Random_Value(buffer[id.x].position.x));
+    if (buffer[id.x].health_status == 0) // Should only happen when the person is healthy
+    {
+        buffer[id.x].health_status = 1;
+        // creates random remaining time to stay in this state based on the user inputted values
+        buffer[id.x].remaining_time = lerp(min_infectious_time, max_infectious_time, Random_Value(buffer[id.x].position.x));
     
-    InterlockedAdd(data_buffer[0].number_of_infected, 1);
-    InterlockedAdd(data_buffer[0].number_of_healthy, -1);
-    
-    //debug_buffer[0].x = fmod(id.x, 1024);
+        InterlockedAdd(data_buffer[0].number_of_infected, 1);
+        InterlockedAdd(data_buffer[0].number_of_healthy, -1);
+    }
 }
 
-void Become_Recovering(uint3 id)
+
+void After_Infection(uint3 id)
 {
-    // changes health status so the colour reflects the change
-    buffer[id.x].health_status = 2;
-    // creates random remaining time to stay in this state based on the user inputted values
-    buffer[id.x].remaining_time = lerp(min_recovering_time, max_recovering_time, Random_Value(buffer[id.x].position.y));
+    if (Random_Value((buffer[id.x].position.y * buffer[id.x].position.x)) < immunity_chance)
+    {
+        buffer[id.x].health_status = 3; // Set health status to immune
+        InterlockedAdd(data_buffer[0].number_of_immune, 1);
+        InterlockedAdd(data_buffer[0].number_of_infected, -1);
+    }
+    else
+    {
+        buffer[id.x].health_status = 2;
+        // creates random remaining time to stay in this state based on the user inputted values
+        buffer[id.x].remaining_time = lerp(min_recovering_time, max_recovering_time, Random_Value(buffer[id.x].position.y));
     
-    InterlockedAdd(data_buffer[0].number_of_recovered, 1);
-    InterlockedAdd(data_buffer[0].number_of_infected, -1);
+        InterlockedAdd(data_buffer[0].number_of_recovered, 1);
+        InterlockedAdd(data_buffer[0].number_of_infected, -1);
+    };
 }
+
 
 void Become_Healthy(uint3 id)
-{
-    // changes health state so that the colour reflects the change
-    buffer[id.x].health_status = 0;
+{   
+    if (buffer[id.x].health_status = 2) // Becoming Healthy should only happen when the person is recovering
+    {
+        buffer[id.x].health_status = 0;
     
-    InterlockedAdd(data_buffer[0].number_of_healthy, 1);
-    InterlockedAdd(data_buffer[0].number_of_recovered, -1);
+        InterlockedAdd(data_buffer[0].number_of_healthy, 1);
+        InterlockedAdd(data_buffer[0].number_of_recovered, -1);
+    }
+}
 
+
+void Become_Immune(uint3 id)
+{
+    if (buffer[id.x].health_status = 1) // Becoming immune should only happen when the person is infected
+    {
+        buffer[id.x].health_status = 3;
+    
+        InterlockedAdd(data_buffer[0].number_of_infected, -1);
+        InterlockedAdd(data_buffer[0].number_of_immune, 1); 
+    }
 }

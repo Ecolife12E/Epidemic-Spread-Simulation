@@ -10,10 +10,15 @@ public class DataObject : ScriptableObject
     public int num_of_healthy;
     public int num_of_infected;
     public int num_of_recovered;
+    public int num_of_immune;
 
     [Header("Texture Settings")]
     public int texture_width;
     public int texture_height;
+
+    [Header("Immunity Settings")]
+    public bool immunity;
+    public float immunity_chance;
 
     [Header("Population Model")]
     public int population_id;

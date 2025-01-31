@@ -8,6 +8,7 @@ public class DatabaseManager : MonoBehaviour
 {
     public DataObject data_object;
 
+    public GuiManager gui_manager;
     public const string db_uri = "URI=file:Database.sqlite";
 
 
@@ -16,7 +17,10 @@ public class DatabaseManager : MonoBehaviour
     {
         Set_Up_Tables();
         Save_Simulation_Preset();
-
+        data_object.population_name = "Default";
+        data_object.disease_name = "Default";
+        Load_Population_Preset();
+        Load_Disease_Preset();
         Get_Max_Sim_ID();
     }
 
@@ -26,25 +30,36 @@ public class DatabaseManager : MonoBehaviour
         using (IDbConnection database_connection = new SqliteConnection(db_uri))
         {
             database_connection.Open();
+            // Population Table
 
             using (IDbCommand population_table_command = database_connection.CreateCommand())
             {
-                // Population Table
                 population_table_command.CommandText = "CREATE TABLE IF NOT EXISTS Population_Table(" +
                     "population_id INTEGER NOT NULL," +
                     "population_count INTEGER," +
                     "population_name varchar(255) NOT NULL UNIQUE," +
                     "global_speed FLOAT," +
                     "number_of_sensors INTEGER," +
-                    //"UNIQUE(population_count,global_speed,number_of_sensors)" +
                     "PRIMARY KEY (population_id AUTOINCREMENT))";
 
                 population_table_command.ExecuteNonQuery();
             }
 
+            using (IDbCommand population_table_default = database_connection.CreateCommand())
+            {
+                population_table_default.CommandText =
+                    "INSERT OR REPLACE INTO Population_Table(population_id," +
+                    "population_count, population_name," +
+                    "global_speed, number_of_sensors)" +
+
+                    "VALUES(0,100000,'Default',14,20)";
+
+                population_table_default.ExecuteNonQuery();
+            }      
+
+            // Disease Table
             using (IDbCommand disease_Table_command = database_connection.CreateCommand())
             {
-                // Disease Table
                 disease_Table_command.CommandText = "CREATE TABLE IF NOT EXISTS Disease_Table(" +
                     "disease_id INTEGER NOT NULL," +
                     "disease_name varchar(255) NOT NULL UNIQUE," +
@@ -59,9 +74,28 @@ public class DatabaseManager : MonoBehaviour
                 disease_Table_command.ExecuteReader();
             }
 
+            using(IDbCommand disease_table_default = database_connection.CreateCommand())
+            {
+                disease_table_default.CommandText =
+                    "INSERT OR REPLACE INTO Disease_Table(disease_id," +
+                    "disease_name, transmission_radius," +
+                    "min_infection_time, max_infection_time," +
+                    "min_recovering_time, max_recovering_time," +
+                    "is_reccuring)" +
+
+                    "VALUES(0," +
+                    "'Default', 4, " +
+                    "2, 4," +
+                    "6, 8," +
+                    "1)";
+
+                disease_table_default.ExecuteNonQuery();
+            }
+
+
+            // Simulation Results Table
             using (IDbCommand simulation_results_table_command = database_connection.CreateCommand())
             {
-                // Simulation Results Table
                 simulation_results_table_command.CommandText =
                     "CREATE TABLE IF NOT EXISTS Simulation_Results_Table(" +
                     "simulation_id INTEGER," +
@@ -69,10 +103,10 @@ public class DatabaseManager : MonoBehaviour
                     "num_of_healthy INTEGER," +
                     "num_of_infected INTEGER," +
                     "num_of_recovered INTEGER," +
+                    "num_of_immune INTEGER," +
                     "PRIMARY KEY (simulation_id, frame_id))";
 
                 simulation_results_table_command.ExecuteReader();
-
             }
 
             using (IDbCommand simulation_preset_table_command = database_connection.CreateCommand())
@@ -89,6 +123,19 @@ public class DatabaseManager : MonoBehaviour
                     "PRIMARY KEY (simulation_id))";
 
                 simulation_preset_table_command.ExecuteReader();
+            }
+
+            using (IDbCommand simulation_results_table_default = database_connection.CreateCommand())
+            {
+                simulation_results_table_default.CommandText =
+                    "INSERT OR REPLACE INTO Simulation_Preset_Table(" +
+                    "simulation_id, population_id," +
+                    "disease_id)" +
+
+                    "VALUES(" +
+                    "0, 0," +
+                    "0)";
+                simulation_results_table_default.ExecuteNonQuery();
             }
         }
     }
@@ -247,12 +294,12 @@ public class DatabaseManager : MonoBehaviour
                     "INSERT OR REPLACE INTO Simulation_Results_Table(" +
                     "simulation_id, frame_id," +
                     "num_of_healthy, num_of_infected," +
-                    "num_of_recovered)" +
+                    "num_of_recovered, num_of_immune)" +
 
                     "VALUES(" +
                     "@Simulation_id, @Frame_id," +
                     "@Num_Of_Healthy, @Num_Of_Infected," +
-                    "@Num_of_Recovered)";
+                    "@Num_Of_Recovered, @Num_of_Immune)";
 
                 IDbDataParameter param_simulation_id = save_simulation_results.CreateParameter();
                 param_simulation_id.ParameterName = "@Simulation_id";
@@ -279,6 +326,11 @@ public class DatabaseManager : MonoBehaviour
                 param_num_of_recovered.Value = data_object.num_of_recovered;
                 save_simulation_results.Parameters.Add(param_num_of_recovered);
 
+                IDbDataParameter param_num_of_immune = save_simulation_results.CreateParameter();
+                param_num_of_immune.ParameterName = "@Num_of_Immune";
+                param_num_of_immune.Value = data_object.num_of_immune;
+                save_simulation_results.Parameters.Add(param_num_of_immune);
+
                 save_simulation_results.ExecuteNonQuery();
             }
         }
@@ -292,9 +344,7 @@ public class DatabaseManager : MonoBehaviour
             using(IDbCommand get_max_sim_id = database_connection.CreateCommand())
             {
                 get_max_sim_id.CommandText =
-                    "SELECT MAX(simulation_id) FROM Simulation_Results_Table";
-
-
+                    "SELECT MAX(simulation_id) FROM Simulation_Preset_Table";
                 data_object.simulation_id = (int)(long)get_max_sim_id.ExecuteScalar() + 1;
                 //Debug.Log((long)get_max_sim_id.ExecuteScalar());
             }
@@ -348,6 +398,21 @@ public class DatabaseManager : MonoBehaviour
 
 
                 IDataReader reader = load_population.ExecuteReader();
+
+                bool null_value = false;
+                for(int i = 0; i < reader.FieldCount; i++)
+                {
+                    if (reader.IsDBNull(i))
+                    {
+                        null_value = true;
+                    };
+                };
+
+                if (null_value)
+                {
+                    gui_manager.Invalid_Population_Query();
+                    return;
+                }
                 while (reader.Read())
                 {
                     data_object.population_id = reader.GetInt32(0);
@@ -357,11 +422,109 @@ public class DatabaseManager : MonoBehaviour
                     data_object.number_of_sensors = reader.GetInt32(4);
                 }
 
-                GuiManager.Reset_Population_static();
+                gui_manager.Reset_Population_Sliders();
             }
         }
     }
 
+    public void Load_Disease_Preset()
+    {
+        using (IDbConnection database_connection = new SqliteConnection(db_uri))
+        {
+            database_connection.Open();
+            using(IDbCommand load_disease = database_connection.CreateCommand())
+            {
+                load_disease.CommandText =
+                    "SELECT * FROM Disease_Table WHERE disease_name == @Given_Disease_name";
 
+                IDbDataParameter param_disease_name = load_disease.CreateParameter();
+                param_disease_name.ParameterName = "@Given_Disease_name";
+                param_disease_name.Value = data_object.disease_name;
+                load_disease.Parameters.Add(param_disease_name);
+
+                IDataReader reader = load_disease.ExecuteReader();
+
+                bool null_value = false;
+                for(int i = 0; i < reader.FieldCount; i++)
+                {
+                    if (reader.IsDBNull(i))
+                    {
+                        //Debug.Log("Null values");
+                        null_value = true;
+                    };
+                };
+
+                if (null_value)
+                {
+                    gui_manager.Invalid_Disease_Query();
+                    return;
+                }
+
+                while (reader.Read())
+                {
+                    
+
+                    data_object.disease_id = reader.GetInt32(0);
+                    data_object.disease_name = reader.GetString(1);
+                    data_object.radius = reader.GetFloat(2);
+                    data_object.infection_time.x = reader.GetFloat(3);
+                    data_object.infection_time.y = reader.GetFloat(4);
+                    data_object.recovering_time.x = reader.GetFloat(5);
+                    data_object.recovering_time.y = reader.GetFloat(6);
+                    data_object.is_reccuring = reader.GetBoolean(7);
+                }
+
+                gui_manager.Reset_Disease_Sliders();
+            }
+        }
+    }
+
+    public List<string> Get_Population_Names()
+    {
+        List<string> names = new List<string>();
+        using (IDbConnection database_connection = new SqliteConnection(db_uri))
+        {
+            database_connection.Open();
+            using(IDbCommand get_population_names = database_connection.CreateCommand())
+            {
+                get_population_names.CommandText =
+                    "Select population_name FROM Population_Table";
+                IDataReader reader = get_population_names.ExecuteReader();
+
+                while (reader.Read())
+                {
+                    for(int i =  0; i < reader.FieldCount; i++)
+                    {
+                        names.Add(reader.GetString(i));
+                    }
+                }
+                return names;
+            }
+        }
+    }
+
+    public List<string> Get_Disease_Names()
+    {
+        List<string> names = new List<string>();
+        using (IDbConnection database_connection = new SqliteConnection(db_uri))
+        {
+            database_connection.Open();
+            using(IDbCommand get_disease_names = database_connection.CreateCommand())
+            {
+                get_disease_names.CommandText =
+                    "SELECT disease_name FROM Disease_Table";
+                IDataReader reader = get_disease_names.ExecuteReader();
+
+                while (reader.Read())
+                {
+                    for (int i = 0;i < reader.FieldCount; i++)
+                    {
+                        names.Add(reader.GetString(i));
+                    }
+                }
+                return names;
+            }
+        }
+    }
 }
 

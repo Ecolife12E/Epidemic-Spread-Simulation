@@ -27,13 +27,14 @@ public class ComputeManager : MonoBehaviour
         public int number_of_healthy;
         public int number_of_infected;
         public int number_of_recovered;
+        public int number_of_immune;
     }
 
    
     private int buffer_size; // size of each person in bits
     private Person[] buffer_data; // array to save population data to
 
-    private int data_buffer_size; // sizee of Data_Struct in bits
+    private int data_buffer_size; // size of Data_Struct in bits
     private Data_Struct[] data_buffer_data;
 
 
@@ -46,7 +47,7 @@ public class ComputeManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        Simulation_started = false;
+        Simulation_started = true;
         data_object.frame_id = 0;
 
         // a new texture is creates and we enable RandomWrite so the texture can be modified
@@ -65,7 +66,7 @@ public class ComputeManager : MonoBehaviour
 
         debug_buffer_data = new Vector2[data_object.population_count];
 
-        data_buffer_size = sizeof(int) * 3;
+        data_buffer_size = sizeof(int) * 4;
         data_buffer_data = new Data_Struct[1]; // only one instance as there is no need for more counters.
 
         // create the population with some random values
@@ -76,7 +77,7 @@ public class ComputeManager : MonoBehaviour
             // Gives each new point a random target position within the texture bounds
             buffer_data[i].target_position = new Vector2(Random.Range(0, data_object.texture_width), Random.Range(0, data_object.texture_height));
             // Gives each point a speed percentage that creates variance
-            buffer_data[i].speed_percentage = Random.Range(25, 100);
+            buffer_data[i].speed_percentage = Random.Range(25, 125);
             // fills the remaining time values with the max time. 
             buffer_data[i].remaining_time = data_object.infection_time.y;
 
@@ -94,7 +95,6 @@ public class ComputeManager : MonoBehaviour
             }
         }
     }
-
 
     public void Start_Simulation()
     {
@@ -134,6 +134,8 @@ public class ComputeManager : MonoBehaviour
             compute_shader.SetFloat("min_recovering_time", data_object.recovering_time.x);
             compute_shader.SetFloat("max_recovering_time", data_object.recovering_time.y);
             compute_shader.SetBool("is_recursive", data_object.is_reccuring);
+            compute_shader.SetBool("immunity", data_object.immunity);
+            compute_shader.SetFloat("immunity_chance", data_object.immunity_chance);
 
             // Allows the Compute Shader to run, with the needed threads
             compute_shader.Dispatch(0, 1024, 1, 1);
@@ -189,7 +191,9 @@ public class ComputeManager : MonoBehaviour
             compute_shader.SetFloat("max_infectious_time", data_object.infection_time.y);
             compute_shader.SetFloat("min_recovering_time", data_object.recovering_time.x);
             compute_shader.SetFloat("max_recovering_time", data_object.recovering_time.y);
-            compute_shader.SetBool("is_reccursive", data_object.is_reccuring);
+            compute_shader.SetBool("is_recursive", data_object.is_reccuring);
+            compute_shader.SetBool("immunity", data_object.immunity);
+            compute_shader.SetFloat("immunity_chance", data_object.immunity_chance);
 
             compute_shader.Dispatch(0, 1024, 1, 1);
 
@@ -197,7 +201,8 @@ public class ComputeManager : MonoBehaviour
             buffer.GetData(buffer_data);
             debug_buffer.GetData(debug_buffer_data);
 
-            //Debug.Log(debug_buffer_data[0]);
+            Debug.Log(data_object.is_reccuring);
+            Debug.Log(debug_buffer_data[0]);
 
             buffer.Dispose();
             debug_buffer.Dispose();
@@ -208,12 +213,19 @@ public class ComputeManager : MonoBehaviour
 
             database_manager.Save_Simulation_Results();
 
-
             Add_Record_CSV(data_object.frame_id, data_object.num_of_healthy, data_object.num_of_infected, data_object.num_of_recovered, "C:\\Users\\willb\\Unity Projects\\Computer Science Coursework - Epidemic Spread Simulation\\Assets\\Results\\Results.csv");
             data_object.frame_id++;
+
         }
 
     }
+
+    public void Reset_Compute_Shader()
+    {
+        database_manager.Get_Max_Sim_ID();
+        Start();
+    }
+
 
     void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
@@ -226,6 +238,7 @@ public class ComputeManager : MonoBehaviour
         data_object.num_of_healthy = data[0].number_of_healthy;
         data_object.num_of_infected = data[0].number_of_infected;
         data_object.num_of_recovered = data[0].number_of_recovered;
+        data_object.num_of_immune = data[0].number_of_immune;
     }
 
 
@@ -244,7 +257,4 @@ public class ComputeManager : MonoBehaviour
             Debug.Log("Application did a little wrongen");
         }
     }
-
-
-
 }
