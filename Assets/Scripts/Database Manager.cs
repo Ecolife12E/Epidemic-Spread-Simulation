@@ -22,6 +22,7 @@ public class DatabaseManager : MonoBehaviour
         Load_Population_Preset();
         Load_Disease_Preset();
         Get_Max_Sim_ID();
+        Debug.Log(Get_Results_Data(122));
     }
 
     // Checks for correct tables and linking of foreign keys
@@ -526,5 +527,76 @@ public class DatabaseManager : MonoBehaviour
             }
         }
     }
+
+
+    public List<List<int>> Get_Results_Data(int simulation_id)
+    {
+        List<List<int>> results_data = new List<List<int>>();
+        int frame_count = new int(); 
+
+        using (IDbConnection database_connection = new SqliteConnection(db_uri))
+        {
+            database_connection.Open();
+
+            // Command to find the number of records (frames) are saved into the database
+            using (IDbCommand get_frame_count = database_connection.CreateCommand())
+            {
+                get_frame_count.CommandText =
+                    "SELECT Count(frame_id) FROM Simulation_Results_Table WHERE simulation_id = @Given_Simulation_ID";
+
+                IDbDataParameter given_simulation_id = get_frame_count.CreateParameter();
+                given_simulation_id.ParameterName = "@Given_Simulation_ID";
+                given_simulation_id.Value = simulation_id;
+                get_frame_count.Parameters.Add(given_simulation_id);
+
+                IDataReader reader = get_frame_count.ExecuteReader();
+                while (reader.Read())
+                {
+                    frame_count = reader.GetInt32(0);
+                }
+                reader.Close();
+            }
+
+            // Command that iterates through the database and frames to read the data saved
+            using (IDbCommand get_results_data = database_connection.CreateCommand())
+            {
+                get_results_data.CommandText =
+                    "SELECT * FROM Simulation_Results_Table WHERE (simulation_id == @Given_Simulation_ID AND frame_id == @Given_Frame_ID)";
+
+                IDbDataParameter given_simulation_id = get_results_data.CreateParameter();
+                given_simulation_id.ParameterName = "@Given_Simulation_ID";
+                given_simulation_id.Value = simulation_id;
+                get_results_data.Parameters.Add(given_simulation_id);
+
+                // iterate for the length of that simulation
+                for (int i = 0; i< frame_count; i++)
+                {
+                    IDbDataParameter given_frame_id = get_results_data.CreateParameter();
+                    given_frame_id.ParameterName = "@Given_Frame_ID";
+                    given_frame_id.Value = frame_count;
+                    get_results_data.Parameters.Add(given_frame_id);
+
+                    IDataReader frame_reader = get_results_data.ExecuteReader();
+
+                    while (frame_reader.Read())
+                    {
+                        // Iterate through the field of the database
+                        List<int> frame_data = new List<int>();
+
+                        for(int j = 0;  j < frame_reader.FieldCount; j++)
+                        {
+                            // save the data to the temp array
+                            frame_data.Add(frame_reader.GetInt32(j));
+                        }
+                        // write the temp array to the results
+                        results_data.Add(frame_data);
+                    }
+                    frame_reader.Close();
+                }
+            }
+        }
+        return results_data;
+    }
+
 }
 

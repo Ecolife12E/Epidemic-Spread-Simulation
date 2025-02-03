@@ -1,9 +1,12 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel CSMain
 #pragma kernel CSMain
+#pragma kernel Plot_Graph
 
 // the renderTexture that will be the output of the compute shader
 RWTexture2D<float4> Result;
+
+//
 
 // Struct for each person within the simulation
 struct Person
@@ -24,10 +27,22 @@ struct Data_Struct
     int number_of_immune;
 };
 
+// Struct for the data to plot on graph
+struct Graph_Data
+{
+    uint frame_id;
+    uint num_of_healthy;
+    uint num_of_infected;
+    uint num_of_recovered;
+    uint num_of_immune;
+};
+
 // Createing the buffers
 RWStructuredBuffer<Person> buffer;
 RWStructuredBuffer<Data_Struct> data_buffer;
 RWStructuredBuffer<float2> debug_buffer;
+
+RWStructuredBuffer<Graph_Data> graph_buffer;
 
 // Variables
 float global_speed;
@@ -46,6 +61,12 @@ float min_recovering_time;
 bool is_recursive;
 bool immunity;
 float immunity_chance;
+
+// Graph Variables
+uint population_count;
+uint max_frame_id;
+
+
 
 
 // Functions
@@ -126,6 +147,28 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         }
     }
 } 
+
+
+// Fuction that plots the graph
+[numThreads(1, 1, 1)]
+void Plot_Graph(uint3 id : SV_DispatchThreadID)
+{
+    // calculate how many frames per puxel of screen
+    float width_density = max_frame_id / texture_width;
+    // calculate how many people per pizel of height
+    float height_desity = population_count / texture_height;
+    
+    int x_position = floor(graph_buffer[id.x].frame_id / width_density);
+    
+    
+    // plotting the points based on the data given
+    Result[(x_position, floor(graph_buffer[id.x].num_of_healthy / height_desity))] = Return_Colour(0); // healthy point;
+    Result[(x_position, floor(graph_buffer[id.x].num_of_infected / height_desity))] = Return_Colour(1); // infected point;
+    Result[(x_position, floor(graph_buffer[id.x].num_of_recovered / height_desity))] = Return_Colour(2); // recovered point
+    Result[(x_position, floor(graph_buffer[id.x].num_of_immune / height_desity))] = Return_Colour(3); // immune point
+    
+}
+
 
 
 float2 Move_Person(float2 current_position, float2 target_position, float speed)
