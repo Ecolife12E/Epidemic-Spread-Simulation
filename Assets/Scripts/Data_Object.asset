@@ -12,15 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3aab3062375e7a346a0cac3cadf4cf08, type: 3}
   m_Name: Data_Object
   m_EditorClassIdentifier: 
-  simulation_id: 117
-  num_of_healthy: 13637
-  num_of_infected: 18481
-  num_of_recovered: 38217
-  num_of_immune: 29665
+  simulation_id: 19
+  num_of_healthy: 6308
+  num_of_infected: 26982
+  num_of_recovered: 35402
+  num_of_immune: 131308
   texture_width: 1920
   texture_height: 1080
   immunity: 1
-  immunity_chance: 0.01
+  immunity_chance: 0.1
   population_id: 0
   population_count: 100000
   population_name: Default
@@ -34,4 +34,13 @@ MonoBehaviour:
   infection_time: {x: 2, y: 4}
   recovering_time: {x: 6, y: 8}
   is_reccuring: 1
-  frame_id: 3401
+  frame_id: 0
+  max_frame: 18220
+  simulation_active: 0
+  graph_active: 1
+  settings_is_showing: 0
+  graph_settings_is_showing: 0
+  chosen_simulation_id: 17
+  chosen_simulation_id_1: 17
+  chosen_simulation_id_2: 18
+  chosen_graph_drawn: 1

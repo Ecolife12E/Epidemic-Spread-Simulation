@@ -1,10 +1,11 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel CSMain
-#pragma kernel CSMain
 #pragma kernel Plot_Graph
+#pragma kernel Compare_Graph
 
 // the renderTexture that will be the output of the compute shader
 RWTexture2D<float4> Result;
+RWTexture2D<float4> Graph_Result;
 
 //
 
@@ -65,7 +66,18 @@ float immunity_chance;
 // Graph Variables
 uint population_count;
 uint max_frame_id;
+uint min_frame_id;
+const uint healthy = 0;
+const uint infected = 1;
+const uint recovered = 2;
+const uint immune = 3;
 
+// Graph Comparison Variables
+uint graph_population_count;
+uint graph_max_frame;
+
+RWStructuredBuffer<Graph_Data> graph_1_buffer;
+RWStructuredBuffer<Graph_Data> graph_2_buffer;
 
 
 
@@ -150,29 +162,61 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
 
 // Fuction that plots the graph
-[numThreads(1, 1, 1)]
+[numthreads(128, 1, 1)]
 void Plot_Graph(uint3 id : SV_DispatchThreadID)
 {
     // calculate how many frames per puxel of screen
     float width_density = max_frame_id / texture_width;
     // calculate how many people per pizel of height
-    float height_desity = population_count / texture_height;
+    float height_density = (population_count / texture_height);
     
-    int x_position = floor(graph_buffer[id.x].frame_id / width_density);
+    int x_position = floor((graph_buffer[id.x].frame_id - min_frame_id) / width_density);
+    
+    debug_buffer[id.x].x = texture_height;
+    debug_buffer[id.x].y = height_density;
     
     
     // plotting the points based on the data given
-    Result[(x_position, floor(graph_buffer[id.x].num_of_healthy / height_desity))] = Return_Colour(0); // healthy point;
-    Result[(x_position, floor(graph_buffer[id.x].num_of_infected / height_desity))] = Return_Colour(1); // infected point;
-    Result[(x_position, floor(graph_buffer[id.x].num_of_recovered / height_desity))] = Return_Colour(2); // recovered point
-    Result[(x_position, floor(graph_buffer[id.x].num_of_immune / height_desity))] = Return_Colour(3); // immune point
+    Graph_Result[float2(x_position, ceil(graph_buffer[id.x].num_of_healthy / height_density))] = float4(1, 1, 1, 0); // healthy point
+    Graph_Result[float2(x_position, ceil(graph_buffer[id.x].num_of_infected / height_density))] = float4(1, 0, 0, 0); // infected point
+    Graph_Result[float2(x_position, ceil(graph_buffer[id.x].num_of_recovered / height_density))] = float4(.5f, .5f, .5f, 0); // recovered point
+    Graph_Result[float2(x_position, ceil(graph_buffer[id.x].num_of_immune / height_density))] = float4(0, 0.75, 1, 0); // immune point
     
 }
 
+[numthreads(128,8,1)]
+void Compare_Graph(uint3 id : SV_DispatchThreadID)
+{
+    // Calculate Width Density
+    float width_density = graph_max_frame / texture_width;
+    // Calculate Height Density
+    float height_density = graph_population_count / texture_height;
+    
+    // Plotting the point for graph 1
+    int x_position = floor(graph_1_buffer[id.x].frame_id / width_density);
+    debug_buffer[id.x].x = graph_max_frame;
+    debug_buffer[id.x].y = height_density;
+    
+    Graph_Result[float2(x_position, ceil(graph_1_buffer[id.x].num_of_healthy / height_density))] = float4(1, 1, 1, 0); // healthy point
+    Graph_Result[float2(x_position, ceil(graph_1_buffer[id.x].num_of_infected / height_density))] = float4(1, 0, 0, 0); // infected point
+    Graph_Result[float2(x_position, ceil(graph_1_buffer[id.x].num_of_recovered / height_density))] = float4(.5f, .5f, .5f, 0); // recovered point
+    Graph_Result[float2(x_position, ceil(graph_1_buffer[id.x].num_of_immune / height_density))] = float4(0, 0.75, 1, 0); // immune point
+    
+    // Plotting the point for graph 2
+    x_position = floor(graph_2_buffer[id.x].frame_id / width_density);
+    //debug_buffer[id.x] = graph_1_buffer[id.x].num_of_healthy;
+    
+    Graph_Result[float2(x_position, ceil(graph_2_buffer[id.x].num_of_healthy / height_density))] = float4(0.7, 0.7, 0.7, 0); // healthy point
+    Graph_Result[float2(x_position, ceil(graph_2_buffer[id.x].num_of_infected / height_density))] = float4(1, 0.5, 0, 0); // infected point
+    Graph_Result[float2(x_position, ceil(graph_2_buffer[id.x].num_of_recovered / height_density))] = float4(1, 1, 0.3, 0); // recovered point
+    Graph_Result[float2(x_position, ceil(graph_2_buffer[id.x].num_of_immune / height_density))] = float4(0.0, 0.45, 0.7, 0); // immune point
+    
+    //Graph_Result[id.xy] = float4(id.x & id.y, (id.x & 15) / 15.0, (id.y & 15) / 15.0, 0.0);
 
+}
 
 float2 Move_Person(float2 current_position, float2 target_position, float speed)
-{
+{ 
     // calculates the difference between the target and current position
     float2 direction = target_position - current_position;
     
@@ -231,13 +275,14 @@ float4 Return_Colour(uint health_status)
             return float4(1, 0, 0, 0);
         
         case 2: // recovering point
-            return float4(.5f, .5f, .5f, 0);
+            //return float4(.5f, .5f, .5f, 0);
+            return float4(1, 1, 0, 0);
         
         case 3: // immune point
             return float4(0, 0.75, 1, 0);
         
         default: // default if no health status is given
-            return float4(0, 0, 1, 0);
+            return float4(1, 0, 1, 0);
     }
 }
 

@@ -12,9 +12,11 @@ public class GuiManager : MonoBehaviour
     [SerializeField] private DatabaseManager database_manager;
     // Data Object
     public DataObject data_object;
+    [SerializeField] private ComputeManager compute_manager;
 
+    [Header("Settings Menu Objects")]
     // Settings Menu Canvas
-    [SerializeField] private GameObject settings_menu;
+    [SerializeField] private CanvasGroup settings_menu;
     [SerializeField] private GameObject show_settings_button;
     [SerializeField] private TextMeshProUGUI _show_settings_button_text;
 
@@ -62,6 +64,14 @@ public class GuiManager : MonoBehaviour
     // Reccuring Disease Toggle
     [SerializeField] private Toggle _reccuring_disease_toggle;
 
+    // Immunity chance Slider
+    [SerializeField] private Slider _immunity_slider;
+    [SerializeField] private TextMeshProUGUI _immunity_slider_text;
+
+    // Immunity Toggle
+    [SerializeField] private Toggle _immunity_toggle;
+
+
     // Disease Name Input
     [SerializeField] private TMP_InputField _disease_name_input;
 
@@ -75,16 +85,44 @@ public class GuiManager : MonoBehaviour
     // Error text box
     [SerializeField] private TextMeshProUGUI _error_text_box;
 
-    public bool settings_is_showing;
-    
-    
+    [Header("Graph GUI Objects")]
+
+    [SerializeField] private CanvasGroup Graph_Menu;
+
+    [SerializeField] private TMP_Dropdown _graph_1_options_dropdown;
+    [SerializeField] private TMP_Dropdown _graph_2_options_dropdown;
+
+    [SerializeField] private CanvasGroup _close_graph_button;
+
+    [Header("Graph Data Canvas")]
+    [SerializeField] private CanvasGroup Graph_Data_Menu;
+    [SerializeField] private TextMeshProUGUI _graph_1_label;
+    [SerializeField] private TextMeshProUGUI _graph_2_label;
+
+    [SerializeField] private TextMeshProUGUI _healthy_graph_data;
+    [SerializeField] private TextMeshProUGUI _infected_graph_data;
+    [SerializeField] private TextMeshProUGUI _recovered_graph_data;
+    [SerializeField] private TextMeshProUGUI _immmune_graph_data;
+
+    [SerializeField] private TextMeshProUGUI _healthy_graph_2_data;
+    [SerializeField] private TextMeshProUGUI _infected_graph_2_data;
+    [SerializeField] private TextMeshProUGUI _recovered_graph_2_data;
+    [SerializeField] private TextMeshProUGUI _immmune_graph_2_data;
+
+    [SerializeField] private TextMeshProUGUI _graph_1_R_value;
+    [SerializeField] private TextMeshProUGUI _graph_2_R_value;
 
     void Start()
     {
-        settings_is_showing = true;
         _show_settings_button_text.text = "Hide Settings";
         _error_text_box.text = "";
 
+        data_object.graph_settings_is_showing = false;
+        data_object.graph_active = false;
+        data_object.chosen_simulation_id_1 = 0;
+        data_object.chosen_simulation_id_2 = 0;
+        _close_graph_button.alpha = 0;
+        Graph_Data_Menu.alpha = 0;
 
         // Assigning the inital values to the sliders and text boxes
         _population_count_slider.value = data_object.population_count;
@@ -162,17 +200,58 @@ public class GuiManager : MonoBehaviour
             data_object.recovering_time.y = v;
         });
 
+        _immunity_slider.onValueChanged.AddListener((v) =>
+        {
+            _immunity_slider_text.text = (v*5).ToString();
+            data_object.immunity_chance = (float)(v * 0.05);
+        });
+
         // Reset Options for Dropdown menues
         Update_Disease_Dropdown_Options();
         Update_Population_Dropdown_Options();
-
+        Update_Graph_Dropdown_Options();
 
 
     }
+
+    public void Update()
+    {
+        if (data_object.settings_is_showing)
+        {
+            settings_menu.alpha = 1;
+            settings_menu.interactable = true;
+        }
+        else
+        {
+            settings_menu.alpha = 0;
+            settings_menu.interactable = false;
+        }
+
+        if (data_object.graph_settings_is_showing)
+        {
+            Graph_Menu.alpha = 1;
+            Graph_Menu.interactable = true;
+        }
+        else
+        {
+            Graph_Menu.alpha = 0;
+            Graph_Menu.interactable = false;
+        }
+    }
+
+
+
+
     public void Restart_The_Simulation()
     {
         // Loads the current scene which will restart the simulation.
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    public void Pause_Simualtion()
+    {
+        data_object.simulation_active = !data_object.simulation_active;
+        database_manager.Save_Simulation_Preset();
     }
 
     public void Population_Name_Save(string s)
@@ -188,6 +267,12 @@ public class GuiManager : MonoBehaviour
     public void Is_reccuring_Change()
     {
         data_object.is_reccuring = _reccuring_disease_toggle.isOn;
+    }
+    public void Close_Graph()
+    {
+        data_object.graph_active = false;
+        _close_graph_button.alpha = 0;
+        Graph_Data_Menu.alpha = 0;
     }
 
     public void Reset_Population_Sliders()
@@ -217,6 +302,9 @@ public class GuiManager : MonoBehaviour
         _max_recovering_time_slider.value = data_object.recovering_time.y;
         _max_recovering_time_text.text = data_object.recovering_time.y.ToString("0.0");
         _disease_name_input.text = data_object.disease_name;
+        _immunity_slider.value = (float)(data_object.immunity_chance/0.05);
+        _immunity_slider_text.text = (data_object.immunity_chance * 100).ToString();
+
 
         _disease_preset_input.text = "";
         _error_text_box.text = "";
@@ -233,9 +321,8 @@ public class GuiManager : MonoBehaviour
     }
 
     public void Change_Settings_Visibility()
-    {
-        settings_menu.SetActive(!settings_is_showing);
-        if (settings_is_showing)
+    {;
+        if (data_object.settings_is_showing)
         {
             _show_settings_button_text.text = "Show Settings";
         }
@@ -243,10 +330,14 @@ public class GuiManager : MonoBehaviour
         {
             _show_settings_button_text.text = "Hide Settings";
         }
-        settings_is_showing = !settings_is_showing;
-
-        Debug.Log("Pressed");
+        data_object.settings_is_showing = !data_object.settings_is_showing;
     }
+
+    public void Change_Graph_Menu_Visibility()
+    {
+        data_object.graph_settings_is_showing = !data_object.graph_settings_is_showing;
+    }
+
 
     public void Update_Population_Dropdown_Options()
     {
@@ -257,11 +348,12 @@ public class GuiManager : MonoBehaviour
         List<string> names = database_manager.Get_Population_Names();
         TMP_Dropdown.OptionData new_data = new TMP_Dropdown.OptionData();
 
+        new_data.text = "";
+        data_text.Add(new_data);
 
         // Iterates through the returned list of strings
         for (int i = 0; i < names.Count; i++)
         {
-            Debug.Log(i.ToString());
             new_data = new TMP_Dropdown.OptionData();
             new_data.text = names[i];
             data_text.Add(new_data); // adds that string as an option for the dropdown menu
@@ -278,15 +370,16 @@ public class GuiManager : MonoBehaviour
         List<string> names = database_manager.Get_Disease_Names();
         TMP_Dropdown.OptionData new_data = new TMP_Dropdown.OptionData();
 
-        for (int i = 0;i < names.Count;i++)
+        new_data.text = "";
+        data_text.Add(new_data);
+
+        for (int i = 0; i < names.Count; i++)
         {
             new_data = new TMP_Dropdown.OptionData();
             new_data.text = names[i];
             data_text.Add(new_data);
         }
-
         _disease_preset_dropdown.AddOptions(data_text);
-
     }
 
     public void Population_Dropdown_Value_Changed()
@@ -301,5 +394,135 @@ public class GuiManager : MonoBehaviour
         database_manager.Load_Disease_Preset();
     }
 
+    public void Update_Graph_Dropdown_Options()
+    {
+        // Character Lengths for the dropdown options
+        const int id_char_length = 6;
+        const int pop_char_length = 25;
+        const int dis_char_length = 25;
+        const int pop_count_char_length = 6;
 
+        _graph_1_options_dropdown.ClearOptions();
+        List<TMP_Dropdown.OptionData> data_text = new List<TMP_Dropdown.OptionData>();
+        List<List<string>> option_text = database_manager.Get_Graph_Options();
+        TMP_Dropdown.OptionData temp = new TMP_Dropdown.OptionData();
+
+        temp.text = "ID    Population Preset        Disease Preset    Population Count";
+        data_text.Add(temp);
+
+
+
+        for (int i = 0; i < option_text.Count; i++)
+        {
+            temp = new TMP_Dropdown.OptionData();
+            /*
+            temp.text = option_text[i][0] + option_text[i][1] + option_text[i][2] + option_text[i][3];
+            data_text.Add(temp);
+            */
+
+            temp.text += option_text[i][0];
+            for(int a = 0; a < id_char_length - option_text[i][0].Length; a++)
+            {
+                temp.text += " ";
+            }
+
+            temp.text += option_text[i][1];
+            for(int b = 0; b < pop_char_length - option_text[i][1].Length; b++)
+            {
+                temp.text += " ";
+            }
+
+            temp.text += option_text[i][2];
+            for (int c = 0; c < dis_char_length - option_text[i][2].Length; c++)
+            {
+                temp.text += " ";
+            }
+            
+            temp.text += option_text[i][3];
+            for (int d = 0; d < pop_count_char_length - option_text[i][3].Length; d++)
+            {
+                temp.text += " ";
+            }
+
+            data_text.Add(temp);
+        }
+
+        _graph_1_options_dropdown.AddOptions(data_text);
+        _graph_2_options_dropdown.AddOptions(data_text);
+    }
+
+    public void Plot_Graph()
+    {
+        if(_graph_1_options_dropdown.value != 0) // if 1st graph selected
+        {
+            if (_graph_2_options_dropdown.value != 0)   // if 2nd graph selected
+            {
+                Debug.Log("Second Graph Detected");
+                // Split string and grab ID from the caption text for first dropdown menu
+                string[] value = _graph_1_options_dropdown.captionText.text.ToString().Split(" ");
+                data_object.chosen_simulation_id_1 = int.Parse(value[0]);
+                // Same as above but for the second dropdown
+                value = _graph_2_options_dropdown.captionText.text.ToString().Split(" ");
+                data_object.chosen_simulation_id_2 = int.Parse(value[0]);
+
+                // Run Graph Compute Shader with 2 values passed in
+                compute_manager.Compare_Graph_Compute_Shader(data_object.chosen_simulation_id_1, data_object.chosen_simulation_id_2);
+                
+                //Update dropdowns if any needed
+                Update_Graph_Dropdown_Options();
+
+                data_object.graph_active = true; // Allow updating of frame
+                _close_graph_button.alpha = 1; // Set graph menu visible
+                Graph_Data_Menu.alpha = 1;
+                data_object.chosen_graph_drawn = false; // allow querying of database
+                data_object.settings_is_showing = false; // hide unneeded settings
+                data_object.graph_settings_is_showing = false;
+
+                _graph_1_label.text = data_object.chosen_simulation_id_1.ToString();
+                _graph_2_label.text = data_object.chosen_simulation_id_2.ToString();
+            }
+            else
+            {
+                Debug.Log("One Graph Detected");
+                string[] value = _graph_1_options_dropdown.captionText.text.ToString().Split(" ");
+                data_object.chosen_simulation_id = int.Parse(value[0]);
+                data_object.chosen_graph_drawn = false;
+                compute_manager.Graph_Compute_Shader(data_object.chosen_simulation_id);
+                data_object.graph_active = true;
+
+                _close_graph_button.alpha = 1;
+                Graph_Data_Menu.alpha = 1;
+                Update_Graph_Dropdown_Options();
+
+                data_object.settings_is_showing = false;
+                data_object.graph_settings_is_showing = false;
+                _graph_1_label.text = "Simulation ID " + data_object.chosen_simulation_id;
+                _graph_2_label.text = "";
+            }
+            
+        }
+    }
+
+
+    public void Update_Graph_Data(int healthy, int infected, int recovering, int immune)
+    {
+        _healthy_graph_data.text = healthy.ToString();
+        _infected_graph_data.text = infected.ToString();
+        _recovered_graph_data.text = recovering.ToString();
+        _immmune_graph_data.text = immune.ToString();
+    }
+
+    public void Update_Graph_2_Data(int healthy, int infected, int recovering, int immune)
+    {
+        _healthy_graph_2_data.text = healthy.ToString();
+        _infected_graph_2_data.text = infected.ToString();
+        _recovered_graph_2_data.text = recovering.ToString();
+        _immmune_graph_2_data.text = immune.ToString();
+    }
+
+    public void Update_R_Values(double R_value_1, double R_value_2)
+    {
+        _graph_1_R_value.text = R_value_1.ToString("0.0000");
+        _graph_2_R_value.text = R_value_2.ToString("0.0000");
+    }
 }
