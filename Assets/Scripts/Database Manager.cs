@@ -644,8 +644,6 @@ public class DatabaseManager : MonoBehaviour
                 }
             }
         }
-
-        Debug.Log(results_data[100][2].ToString());
         return results_data;
     }
 

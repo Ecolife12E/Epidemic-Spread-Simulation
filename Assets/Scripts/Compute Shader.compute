@@ -193,7 +193,7 @@ void Compare_Graph(uint3 id : SV_DispatchThreadID)
     float height_density = graph_population_count / texture_height;
     
     // Plotting the point for graph 1
-    int x_position = floor(graph_1_buffer[id.x].frame_id / width_density);
+    int x_position = floor((graph_1_buffer[id.x].frame_id - min_frame_id) / width_density);
     debug_buffer[id.x].x = graph_max_frame;
     debug_buffer[id.x].y = height_density;
     
@@ -203,7 +203,7 @@ void Compare_Graph(uint3 id : SV_DispatchThreadID)
     Graph_Result[float2(x_position, ceil(graph_1_buffer[id.x].num_of_immune / height_density))] = float4(0, 0.75, 1, 0); // immune point
     
     // Plotting the point for graph 2
-    x_position = floor(graph_2_buffer[id.x].frame_id / width_density);
+    x_position = floor((graph_2_buffer[id.x].frame_id - min_frame_id) / width_density);
     //debug_buffer[id.x] = graph_1_buffer[id.x].num_of_healthy;
     
     Graph_Result[float2(x_position, ceil(graph_2_buffer[id.x].num_of_healthy / height_density))] = float4(0.7, 0.7, 0.7, 0); // healthy point

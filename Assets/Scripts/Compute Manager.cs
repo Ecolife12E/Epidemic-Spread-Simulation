@@ -15,7 +15,7 @@ public class ComputeManager : MonoBehaviour
     public DataObject data_object;
 
     // Structs that are sent to the Compute Shaders
-    public struct Person 
+    public struct Person
     {
         public Vector2 position;
         public Vector2 target_position;
@@ -113,7 +113,7 @@ public class ComputeManager : MonoBehaviour
             buffer_data[i].remaining_time = data_object.infection_time.y;
 
             // creates initial infected person
-            if( i == 0)
+            if (i == 0)
             {
                 buffer_data[i].health_state = 1;
                 data_buffer_data[0].number_of_infected += 1;
@@ -126,7 +126,7 @@ public class ComputeManager : MonoBehaviour
             }
 
             RMB_clicks = 0;
-            
+
         }
     }
 
@@ -202,7 +202,7 @@ public class ComputeManager : MonoBehaviour
             simulation_compute_shader.SetBuffer(0, "buffer", buffer);
 
             // another buffer for debugging
-            ComputeBuffer debug_buffer = new ComputeBuffer(debug_buffer_data.Length, sizeof(float)*2);
+            ComputeBuffer debug_buffer = new ComputeBuffer(debug_buffer_data.Length, sizeof(float) * 2);
             debug_buffer.SetData(debug_buffer_data);
             simulation_compute_shader.SetBuffer(0, "debug_buffer", debug_buffer);
 
@@ -256,7 +256,7 @@ public class ComputeManager : MonoBehaviour
         */
         else if (data_object.graph_active)
         {
-            if(data_object.chosen_simulation_id_2 != 0)
+            if (data_object.chosen_simulation_id_2 != 0)
             {
                 Compare_Graph_Compute_Shader(data_object.chosen_simulation_id_1, data_object.chosen_simulation_id_2);
             }
@@ -272,7 +272,7 @@ public class ComputeManager : MonoBehaviour
                 int width_desnity = (int)Mathf.Floor(data_object.max_frame / data_object.texture_width);
 
                 // Check how many times the RMB has been pressed to determine which variable to save to
-                if(RMB_clicks % 2  == 0)
+                if (RMB_clicks % 2 == 0)
                 {
                     // Store in first frame option
                     data_object.chosen_frame_1 = (int)Mathf.Floor(Input.mousePosition.x * width_desnity);
@@ -284,11 +284,18 @@ public class ComputeManager : MonoBehaviour
                     data_object.chosen_frame_2 = (int)Mathf.Floor(Input.mousePosition.x * width_desnity);
                     RMB_clicks++;
 
-
                     // get graph to update on screen
                     data_object.zoomed = true;
                     data_object.chosen_graph_drawn = false;
                 }
+            }
+            // If middle Mouse Button Clicked
+            if (Input.GetMouseButtonDown(2))
+            {
+                data_object.zoomed = false;
+                data_object.chosen_graph_drawn = false;
+                data_object.chosen_frame_1 = 0;
+                data_object.chosen_frame_2 = 0;
             }
         }
     }
@@ -304,6 +311,11 @@ public class ComputeManager : MonoBehaviour
     public void Graph_Compute_Shader(int given_simulation_id)
     {
         Debug.Log("Single Graph run");
+
+        int max_frame;
+        int min_frame;
+        int frame_difference;
+
         if (!data_object.chosen_graph_drawn)
         {
             graph_render_texture.Release();
@@ -312,11 +324,6 @@ public class ComputeManager : MonoBehaviour
             List<List<int>> results_data = database_manager.Get_Results_Data(given_simulation_id);
             //Debug.Log(results_data.Count);
 
-
-            int max_frame;
-            int min_frame;
-            int frame_difference;
-            
             // check if the user has selected frames to view inbetween
             if (data_object.zoomed)
             {
@@ -335,7 +342,6 @@ public class ComputeManager : MonoBehaviour
                 min_frame = 0;
                 frame_difference = max_frame;
 
-
                 graph_buffer_data = new Graph_Data[max_frame];
             }
 
@@ -344,11 +350,11 @@ public class ComputeManager : MonoBehaviour
             for (int i = min_frame; i < max_frame; i++)
             {
                 //Debug.Log(i);
-                graph_buffer_data[i-min_frame].frame_id = results_data[i][1]; 
-                graph_buffer_data[i-min_frame].num_of_healthy = results_data[i][2];
-                graph_buffer_data[i-min_frame].num_of_infected = results_data[i][3];
-                graph_buffer_data[i-min_frame].num_of_recovered = results_data[i][4];
-                graph_buffer_data[i-min_frame].num_of_immune = results_data[i][5];
+                graph_buffer_data[i - min_frame].frame_id = results_data[i][1];
+                graph_buffer_data[i - min_frame].num_of_healthy = results_data[i][2];
+                graph_buffer_data[i - min_frame].num_of_infected = results_data[i][3];
+                graph_buffer_data[i - min_frame].num_of_recovered = results_data[i][4];
+                graph_buffer_data[i - min_frame].num_of_immune = results_data[i][5];
                 // Debug.Log(results_data[i][0]);
             }
 
@@ -383,7 +389,8 @@ public class ComputeManager : MonoBehaviour
             {
                 graph_buffer_data = new Graph_Data[database_manager.Get_Max_Frame_ID(given_simulation_id)];
                 List<List<int>> results_data = database_manager.Get_Results_Data(given_simulation_id);
-                for (int i = 0; i < data_object.max_frame; i++)
+
+                for (int i = 0; i < database_manager.Get_Max_Frame_ID(given_simulation_id); i++)
                 {
                     graph_buffer_data[i].frame_id = results_data[i][1];
                     graph_buffer_data[i].num_of_healthy = results_data[i][2];
@@ -394,29 +401,67 @@ public class ComputeManager : MonoBehaviour
 
             }
 
-
-            int min_frame = Mathf.Min(data_object.chosen_frame_1, data_object.chosen_frame_2);
-            int mouse_x_position = (int)Mathf.Floor(Input.mousePosition.x);
-            int width_desnity = (int)Mathf.Floor(data_object.max_frame / data_object.texture_width);
-
-            int selected_frame = mouse_x_position * width_desnity;
-            //Debug.Log(selected_frame + min_frame);
-            if (selected_frame+min_frame > min_frame && (selected_frame+min_frame) < data_object.max_frame )
+            // If User has Zoomed the graph
+            if (data_object.zoomed)
             {
-                int healthy = graph_buffer_data[selected_frame+min_frame].num_of_healthy;
-                int infected = graph_buffer_data[selected_frame+min_frame].num_of_infected;
-                int recovering = graph_buffer_data[selected_frame+min_frame].num_of_recovered;
-                int immune = graph_buffer_data[selected_frame+min_frame].num_of_immune;
-
-                gui_manager.Update_Graph_Data(healthy, infected, recovering, immune);
+                // Calculate max and min of the two clicks
+                min_frame = Mathf.Min(data_object.chosen_frame_1, data_object.chosen_frame_2);
+                max_frame = Mathf.Max(data_object.chosen_frame_1, data_object.chosen_frame_2);
+                // Calculate Difference
+                frame_difference = max_frame - min_frame;
+            }
+            else
+            {
+                // Set Min and Max frames
+                min_frame = 0;
+                max_frame = data_object.max_frame;
+                frame_difference = max_frame;
             }
 
+            // Get X position of the mouse pointer
+            int mouse_x_position = (int)Mathf.Floor(Input.mousePosition.x);
+            // Calculate Width Density based on how many frames there are
+            int width_desnity = (int)Mathf.Floor(frame_difference / data_object.texture_width);
+            int selected_frame = (mouse_x_position * width_desnity);
+
+            // If the mouse pointer is on the screen.
+            if (selected_frame > 0 && selected_frame < frame_difference)
+            {
+                // Update and send values to UI
+                int healthy = graph_buffer_data[selected_frame].num_of_healthy;
+                int infected = graph_buffer_data[selected_frame].num_of_infected;
+                int recovering = graph_buffer_data[selected_frame].num_of_recovered;
+                int immune = graph_buffer_data[selected_frame].num_of_immune;
+
+                gui_manager.Update_Graph_Data(healthy, infected, recovering, immune);
+
+                // Calculating the R-Values
+                double graph_1_R_value;
+                try
+                {
+                    // Calculate the R value estimation
+                    graph_1_R_value = (float)graph_buffer_data[selected_frame + 1].num_of_infected / infected;
+                }
+                catch
+                {
+                    // Takes this path if trying to divide by 0
+                    graph_1_R_value = 0;
+                }
+
+                // Update UI
+                gui_manager.Update_R_Values(graph_1_R_value, (double)100);
+            }
         }
     }
 
     public void Compare_Graph_Compute_Shader(int given_simulation_id_1, int given_simulation_id_2)
     {
         // only executing when needed to maintain performance
+
+        int max_frame;
+        int min_frame;
+        int frame_difference;
+
         if (!data_object.chosen_graph_drawn)
         {
             Debug.Log("Comparing Graph Ran");
@@ -432,32 +477,44 @@ public class ComputeManager : MonoBehaviour
             int graph_2_max_frame = data_object.max_frame;
 
 
-            //Debug.Log(graph_1_max_frame + " " + graph_2_max_frame);
+            if (data_object.zoomed)
+            {
+                max_frame = Mathf.Max(data_object.chosen_frame_1, data_object.chosen_frame_2);
+                min_frame = Mathf.Min(data_object.chosen_frame_1, data_object.chosen_frame_2);
+
+                frame_difference = max_frame - min_frame;
+
+                graph_1_buffer_data = new Graph_Data[frame_difference];
+                graph_2_buffer_data = new Graph_Data[frame_difference];
+            }
+            else
+            {
+                max_frame = Mathf.Max(graph_1_max_frame, graph_2_max_frame);
+                min_frame = 0;
+                frame_difference = max_frame;
+
+                graph_1_buffer_data = new Graph_Data[frame_difference];
+                graph_2_buffer_data = new Graph_Data[frame_difference];
+            }
 
             // Get the population count for the two simulations
             int graph_1_population = database_manager.Get_Population_Count(given_simulation_id_1);
             int graph_2_population = database_manager.Get_Population_Count(given_simulation_id_2);
 
-            // work out max population count and frame count
-            int max_frame = Mathf.Max(graph_1_max_frame, graph_2_max_frame);
             int max_population = Mathf.Max(graph_1_population, graph_2_population);
             data_object.max_frame = max_frame;
 
-            // Creating the buffers to be sent to the Compute Shader.
-            graph_1_buffer_data = new Graph_Data[max_frame];
-            graph_2_buffer_data = new Graph_Data[max_frame];
-
-            for(int i = 0; i < max_frame; i++)
+            for (int i = 0; i < frame_difference; i++)
             {
                 try
                 {
                     if (graph_1_results[i] != null)
                     {
-                        graph_1_buffer_data[i].frame_id = graph_1_results[i][1];
-                        graph_1_buffer_data[i].num_of_healthy = graph_1_results[i][2];
-                        graph_1_buffer_data[i].num_of_infected = graph_1_results[i][3];
-                        graph_1_buffer_data[i].num_of_recovered = graph_1_results[i][4];
-                        graph_1_buffer_data[i].num_of_immune = graph_1_results[i][5];
+                        graph_1_buffer_data[i].frame_id = graph_1_results[i + min_frame][1];
+                        graph_1_buffer_data[i].num_of_healthy = graph_1_results[i + min_frame][2];
+                        graph_1_buffer_data[i].num_of_infected = graph_1_results[i + min_frame][3];
+                        graph_1_buffer_data[i].num_of_recovered = graph_1_results[i + min_frame][4];
+                        graph_1_buffer_data[i].num_of_immune = graph_1_results[i + min_frame][5];
                     }
                 }
                 catch
@@ -474,11 +531,11 @@ public class ComputeManager : MonoBehaviour
                 {
                     if (graph_2_results[i] != null)
                     {
-                        graph_2_buffer_data[i].frame_id = graph_2_results[i][1];
-                        graph_2_buffer_data[i].num_of_healthy = graph_2_results[i][2];
-                        graph_2_buffer_data[i].num_of_infected = graph_2_results[i][3];
-                        graph_2_buffer_data[i].num_of_recovered = graph_2_results[i][4];
-                        graph_2_buffer_data[i].num_of_immune = graph_2_results[i][5];
+                        graph_2_buffer_data[i].frame_id = graph_2_results[i + min_frame][1];
+                        graph_2_buffer_data[i].num_of_healthy = graph_2_results[i + min_frame][2];
+                        graph_2_buffer_data[i].num_of_infected = graph_2_results[i + min_frame][3];
+                        graph_2_buffer_data[i].num_of_recovered = graph_2_results[i + min_frame][4];
+                        graph_2_buffer_data[i].num_of_immune = graph_2_results[i + min_frame][5];
                     }
                 }
                 catch
@@ -509,7 +566,8 @@ public class ComputeManager : MonoBehaviour
             simulation_compute_shader.SetInt("texture_width", data_object.texture_width);
             simulation_compute_shader.SetInt("texture_height", data_object.texture_height);
             simulation_compute_shader.SetInt("graph_population_count", max_population);
-            simulation_compute_shader.SetInt("graph_max_frame", max_frame);
+            simulation_compute_shader.SetInt("graph_max_frame", frame_difference);
+            simulation_compute_shader.SetInt("min_frame_id", min_frame);
 
             // Dispatching the Compute Shader
             simulation_compute_shader.Dispatch(2, 128, 8, 1);
@@ -530,27 +588,46 @@ public class ComputeManager : MonoBehaviour
         }
         else // once the graph has been drawn
         {
+
+            if (data_object.zoomed)
+            {
+                max_frame = Mathf.Max(data_object.chosen_frame_1, data_object.chosen_frame_2);
+                min_frame = Mathf.Min(data_object.chosen_frame_1, data_object.chosen_frame_2);
+                frame_difference = max_frame - min_frame;
+            }
+            else
+            {
+                int graph_1_max_frame = database_manager.Get_Max_Frame_ID(given_simulation_id_1);
+                int graph_2_max_frame = database_manager.Get_Max_Frame_ID(given_simulation_id_2);
+
+                max_frame = Mathf.Max(graph_1_max_frame, graph_2_max_frame);
+                min_frame = 0;
+                frame_difference = max_frame;
+            }
+            data_object.max_frame = max_frame;
+
+
             // Resetting Buffers if they become null
             if (graph_1_buffer_data == null)
             {
-                graph_1_buffer_data = new Graph_Data[data_object.max_frame];
-                graph_2_buffer_data = new Graph_Data[data_object.max_frame];
+                graph_1_buffer_data = new Graph_Data[data_object.max_frame+1];
+                graph_2_buffer_data = new Graph_Data[data_object.max_frame+1];
                 List<List<int>> graph_1_results = database_manager.Get_Results_Data(given_simulation_id_1);
-                //Debug.Log(graph_1_results[600][1] +" " + graph_1_results[600][2]);
-                //Debug.Log(data_object.max_frame);
                 List<List<int>> graph_2_results = database_manager.Get_Results_Data(given_simulation_id_2);
+
                 for (int i = 0; i < data_object.max_frame; i++)
                 {
+                    Debug.Log(i);
                     try
                     {
                         if (graph_1_results[i] != null)
                         {
-                            graph_1_buffer_data[i].frame_id = graph_1_results[i][1];
-                            graph_1_buffer_data[i].num_of_healthy = graph_1_results[i][2];
-                            graph_1_buffer_data[i].num_of_infected = graph_1_results[i][3];
-                            graph_1_buffer_data[i].num_of_recovered = graph_1_results[i][4];
-                            graph_1_buffer_data[i].num_of_immune = graph_1_results[i][5];
-                       }
+                            graph_1_buffer_data[i].frame_id = graph_1_results[i + min_frame][1];
+                            graph_1_buffer_data[i].num_of_healthy = graph_1_results[i + min_frame][2];
+                            graph_1_buffer_data[i].num_of_infected = graph_1_results[i + min_frame][3];
+                            graph_1_buffer_data[i].num_of_recovered = graph_1_results[i + min_frame][4];
+                            graph_1_buffer_data[i].num_of_immune = graph_1_results[i + min_frame][5];
+                        }
                     }
                     catch
                     {
@@ -566,11 +643,11 @@ public class ComputeManager : MonoBehaviour
                     {
                         if (graph_2_results[i] != null)
                         {
-                            graph_2_buffer_data[i].frame_id = graph_2_results[i][1];
-                            graph_2_buffer_data[i].num_of_healthy = graph_2_results[i][2];
-                            graph_2_buffer_data[i].num_of_infected = graph_2_results[i][3];
-                            graph_2_buffer_data[i].num_of_recovered = graph_2_results[i][4];
-                            graph_2_buffer_data[i].num_of_immune = graph_2_results[i][5];
+                            graph_2_buffer_data[i].frame_id = graph_2_results[i + min_frame][1];
+                            graph_2_buffer_data[i].num_of_healthy = graph_2_results[i + min_frame][2];
+                            graph_2_buffer_data[i].num_of_infected = graph_2_results[i + min_frame][3];
+                            graph_2_buffer_data[i].num_of_recovered = graph_2_results[i + min_frame][4];
+                            graph_2_buffer_data[i].num_of_immune = graph_2_results[i + min_frame][5];
                         }
                     }
                     catch
@@ -586,11 +663,11 @@ public class ComputeManager : MonoBehaviour
             }
 
             int mouse_x_position = (int)Mathf.Floor(Input.mousePosition.x);
-            int width_desnity = (int)Mathf.Floor(data_object.max_frame / data_object.texture_width);
+            int width_desnity = (int)Mathf.Floor(frame_difference / data_object.texture_width);
 
             int selected_frame = mouse_x_position * width_desnity;
 
-            if (selected_frame > 0 && selected_frame < data_object.max_frame)
+            if (selected_frame > 0 && selected_frame < frame_difference)
             {
                 // Getting data for first graph
                 int healthy_1 = graph_1_buffer_data[selected_frame].num_of_healthy;

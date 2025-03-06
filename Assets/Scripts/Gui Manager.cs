@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
+using System.IO;
 
 
 public class GuiManager : MonoBehaviour
@@ -496,7 +497,7 @@ public class GuiManager : MonoBehaviour
 
                 data_object.settings_is_showing = false;
                 data_object.graph_settings_is_showing = false;
-                _graph_1_label.text = "Simulation ID " + data_object.chosen_simulation_id;
+                _graph_1_label.text = data_object.chosen_simulation_id.ToString();
                 _graph_2_label.text = "";
             }
             
@@ -522,7 +523,57 @@ public class GuiManager : MonoBehaviour
 
     public void Update_R_Values(double R_value_1, double R_value_2)
     {
-        _graph_1_R_value.text = R_value_1.ToString("0.0000");
-        _graph_2_R_value.text = R_value_2.ToString("0.0000");
+        if (R_value_1 == 100){
+            _graph_1_R_value.text = " "; // Hide R Values
+        }
+        else 
+        {
+            _graph_1_R_value.text = R_value_1.ToString("0.0000");
+        }    
+        if(R_value_2 == 100)
+        {
+            _graph_2_R_value.text = " "; // Hide R Values
+        }
+        else
+        {
+            _graph_2_R_value.text = R_value_2.ToString("0.0000");
+        }
+        
+    }
+
+    public void Generate_CSV()
+    {
+        int simulation_id = data_object.chosen_simulation_id;
+        List<List<int>> results_data = database_manager.Get_Results_Data(simulation_id);
+
+        Debug.Log(results_data.Count);
+        string folder_path = Path.Combine(Application.dataPath, "Results");
+
+        string file_name = "Simulation_" + data_object.simulation_id.ToString() + ".csv";
+        string file_path = Path.Combine(folder_path, file_name);
+
+        // Check that the folder exists
+        if (!Directory.Exists(folder_path))
+        {
+            Directory.CreateDirectory(folder_path);
+        }
+
+        // Writing to the CSV
+        using(StreamWriter writer = new StreamWriter(file_path))
+        {
+            // write headers
+            writer.WriteLine("Healthy, Infected, Recovered, Immune");
+
+            for(int i = 0; i < results_data.Count; i++)
+            {
+                // Write Data
+                writer.WriteLine(
+                    results_data[i][2].ToString() + "," +
+                    results_data[i][3].ToString() + "," +
+                    results_data[i][4].ToString() + "," +
+                    results_data[i][5].ToString());
+            }
+        }
+        Debug.Log("CSV File saved at: " + file_path);
     }
 }
